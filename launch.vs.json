@@ -1,0 +1,13 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+  "configurations": [
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "ffvtool.exe",
+      "name": "ffvtool.exe",
+      "args": [ "\"${workspaceRoot}\\roms\\ff5-v110.ips\" \"${workspaceRoot}\\roms\\Final Fantasy V Advance (U).gba\"" ]
+    }
+  ]
+}
