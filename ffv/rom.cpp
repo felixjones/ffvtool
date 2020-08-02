@@ -2,10 +2,12 @@
 
 #include <array>
 #include <vector>
-#include "crc32.hpp"
+#include "crc.hpp"
 #include "ips.hpp"
 
-static constexpr auto rpge_crc32 = 0xf11f1026;
+struct rpge_constants {
+	static constexpr std::uint32_t crc32 = 0xf11f1026;
+};
 
 using namespace ffv;
 
@@ -21,7 +23,7 @@ rom rom::read_ips( std::istream& streamSource ) {
 	hash << header;
 	hash << std::string( std::istreambuf_iterator<char>( streamSource ), {} );
 
-	if ( hash != rpge_crc32 ) {
+	if ( hash != rpge_constants::crc32 ) {
 		throw std::invalid_argument( "Stream is not RPGe v1.1" );
 	}
 
