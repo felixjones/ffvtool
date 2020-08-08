@@ -48,6 +48,7 @@ protected:
 		auto c = xor_mask ^ m_value;
 		for ( ; first != last; ++first ) {
 			c = polynomial_table[( c ^ *first ) % polynomial_table.size()] ^ ( c >> 8 );
+			++m_length;
 		}
 		m_value = xor_mask ^ c;
 	}
@@ -55,7 +56,7 @@ protected:
 public:
 	using value_type = UIntType;
 
-	constexpr crc() noexcept : m_value( 0 ) {}
+	constexpr crc() noexcept : m_value{ 0 }, m_length{ 0 } {}
 
 	template <class Type>
 	constexpr crc& write( const Type& value ) noexcept {
@@ -85,8 +86,13 @@ public:
 		return m_value;
 	}
 
+	constexpr auto length() const noexcept {
+		return m_length;
+	}
+
 protected:
-	value_type	m_value;
+	value_type		m_value;
+	std::uint32_t	m_length;
 
 };
 

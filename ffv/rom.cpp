@@ -26,12 +26,11 @@ rom rom::read_ips( std::istream& streamSource ) {
 
 	std::vector<char> romBytes;
 
-	ips::eof eof;
-	ips::record record;
+	ips::record record {};
+	ips::eof eof {};
 	while ( streamSource.good() ) {
 		record << streamSource;
-		hash << record;
-		
+
 		if ( std::holds_alternative<ips::record::copy_type>( record.data ) ) {
 			const auto& copy = std::get<ips::record::copy_type>( record.data );
 			// TODO
@@ -39,6 +38,8 @@ rom rom::read_ips( std::istream& streamSource ) {
 			const auto& fill = std::get<ips::record::fill_type>( record.data );
 			// TODO
 		}
+
+		hash << record;
 
 		const auto start = streamSource.tellg();
 		eof << streamSource;
