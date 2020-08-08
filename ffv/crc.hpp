@@ -25,9 +25,9 @@ namespace detail {
 	template <typename Type>
 	static constexpr auto make_polynomial_table() noexcept {
 		std::array<Type, 256> table = {};
-		for ( auto jj = 0; jj < 256; jj++ ) {
+		for ( auto jj = 0; jj < 256; ++jj ) {
 			Type b = jj;
-			for ( auto kk = 0; kk < 8; kk++ ) {
+			for ( auto kk = 0; kk < 8; ++kk ) {
 				b = ( b & 1 ? crc_constants<Type>::polynomial ^ ( b >> 1 ) : b >> 1 );
 			}
 			table[jj] = b;
@@ -57,9 +57,16 @@ public:
 
 	constexpr crc() noexcept : m_value( 0 ) {}
 
-	template <class Container>
-	constexpr auto write( const Container& container ) noexcept -> std::enable_if_t<sizeof( typename Container::value_type ) == 1, crc&> {
-		digest( std::cbegin( container ), std::cend( container ) );
+	template <class Type>
+	constexpr crc& write( const Type& value ) noexcept {
+		const auto valueBytes = std::bit_cast<std::array<char, sizeof( value )>>( value );
+		digest( std::cbegin( valueBytes ), std::cend( valueBytes ) );
+		return *this;
+	}
+
+	template <class Iter>
+	constexpr auto write( Iter first, Iter last ) noexcept -> std::enable_if_t<sizeof( typename Iter::value_type ) == 1, crc&> {
+		digest( first, last );
 		return *this;
 	}
 
