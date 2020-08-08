@@ -3,7 +3,6 @@
 
 #include <array>
 #include <bit>
-#include <iostream>
 #include <type_traits>
 
 #include "crc.hpp"
@@ -31,8 +30,6 @@ constexpr crc<UIntType>& operator <<( crc<UIntType>& crc, const ips::record& rec
 
 	crc.write( offsetBytes.begin(), offsetBytes.begin() + ips::record::offset_bytes );
 
-	std::cout << "Offset: " << std::hex << ( 0xff & offsetBytes[0] ) << ( 0xff & offsetBytes[1] ) << ( 0xff & offsetBytes[2] ) << '\n';
-
 	if ( std::holds_alternative<ips::record::copy_type>( record.data ) ) {
 		const auto& copy = std::get<ips::record::copy_type>( record.data );
 
@@ -43,8 +40,6 @@ constexpr crc<UIntType>& operator <<( crc<UIntType>& crc, const ips::record& rec
 
 		crc.write( sizeBytes.begin(), sizeBytes.begin() + ips::record::size_bytes );
 		crc.write( copy.begin(), copy.end() );
-
-		std::cout << "Copy size: " << std::hex << ( 0xff & sizeBytes[0] ) << ( 0xff & sizeBytes[1] ) << '\n';
 	} else if ( std::holds_alternative<ips::record::fill_type>( record.data ) ) {
 		crc.write( std::uint16_t { 0 } );
 
@@ -56,12 +51,8 @@ constexpr crc<UIntType>& operator <<( crc<UIntType>& crc, const ips::record& rec
 		}
 
 		crc.write( fill.data );
-
-		std::cout << "Fill size: " << std::hex << ( 0xff & fill.size ) << '\n';
 	}
 
-	std::cout.flush();
-	
 	return crc;
 }
 
