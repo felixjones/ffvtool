@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstdint>
+#include <type_traits>
 
 namespace ffv {
 namespace detail {
@@ -11,15 +12,24 @@ namespace detail {
 	struct crc_constants {};
 
 	template <>
+	struct crc_constants<std::uint16_t> {
+		// IBM
+		static constexpr std::uint16_t polynomial = 0xa001;
+		static constexpr std::uint16_t xor_mask = 0;
+	};
+
+	template <>
 	struct crc_constants<std::uint32_t> {
+		// ISO
 		static constexpr std::uint32_t polynomial = 0xedb88320;
 		static constexpr std::uint32_t xor_mask = 0xffffffff;
 	};
 
 	template <>
-	struct crc_constants<std::uint16_t> {
-		static constexpr std::uint16_t polynomial = 0xa001;
-		static constexpr std::uint16_t xor_mask = 0;
+	struct crc_constants<std::uint64_t> {
+		// ISO
+		static constexpr std::uint64_t polynomial = 0xd800000000000000;
+		static constexpr std::uint64_t xor_mask = 0xffffffffffffffff;
 	};
 
 	template <typename Type>
@@ -47,8 +57,7 @@ protected:
 	constexpr void digest( Iter first, Iter last ) noexcept {
 		auto c = xor_mask ^ m_value;
 		for ( ; first != last; ++first ) {
-			c = polynomial_table[( c ^ *first ) % polynomial_table.size()] ^ ( c >> 8 );
-			++m_length;
+			c = polynomial_table[( c ^ static_cast<UIntType>( *first ) ) % polynomial_table.size()] ^ ( c >> 8 );
 		}
 		m_value = xor_mask ^ c;
 	}
@@ -56,11 +65,11 @@ protected:
 public:
 	using value_type = UIntType;
 
-	constexpr crc() noexcept : m_value{ 0 }, m_length{ 0 } {}
+	constexpr crc() noexcept : m_value{ 0 } {}
 
 	template <class Type>
 	constexpr crc& write( const Type& value ) noexcept {
-		const auto valueBytes = std::bit_cast<std::array<char, sizeof( value )>>( value );
+		const auto valueBytes = std::bit_cast<std::array<std::byte, sizeof( value )>>( value );
 		digest( std::cbegin( valueBytes ), std::cend( valueBytes ) );
 		return *this;
 	}
@@ -86,18 +95,14 @@ public:
 		return m_value;
 	}
 
-	constexpr auto length() const noexcept {
-		return m_length;
-	}
-
 protected:
 	value_type		m_value;
-	std::uint32_t	m_length;
 
 };
 
 using crc16 = crc<std::uint16_t>;
 using crc32 = crc<std::uint32_t>;
+using crc64 = crc<std::uint64_t>;
 
 } // ffv
 

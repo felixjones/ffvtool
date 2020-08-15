@@ -6,7 +6,7 @@ cmake_minimum_required (VERSION 3.8)
 project ("ffvtool")
 
 # Add source to this project's executable.
-add_executable (ffvtool "main.cpp" "ffv/rom.hpp" "ffv/crc.hpp" "ffv/rom.cpp" "ffv/ips.hpp" "ffv/ips_ext.hpp")
+add_executable (ffvtool "main.cpp" "ffv/rom.hpp" "ffv/crc.hpp" "ffv/rom.cpp" "ffv/ips.hpp" "ffv/ips_ext.hpp"   )
 
 set_property(TARGET ffvtool PROPERTY CXX_STANDARD 20)
 

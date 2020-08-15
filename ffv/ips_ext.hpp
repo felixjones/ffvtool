@@ -1,10 +1,6 @@
 #ifndef FFV_IPS_EXT_HPP
 #define FFV_IPS_EXT_HPP
 
-#include <array>
-#include <bit>
-#include <type_traits>
-
 #include "crc.hpp"
 #include "ips.hpp"
 

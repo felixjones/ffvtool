@@ -1,16 +1,7 @@
 #include "rom.hpp"
 
-#include <algorithm>
-#include <array>
-#include <vector>
-
-#include "crc.hpp"
 #include "ips.hpp"
 #include "ips_ext.hpp"
-
-struct rpge_constants {
-	static constexpr std::uint32_t crc32 = 0xf11f1026;
-};
 
 using namespace ffv;
 
@@ -25,8 +16,7 @@ rom rom::read_ips( std::istream& streamSource ) {
 	crc32 hash;
 	hash << header;
 
-	// TODO : Replace romBytes with sparse memory
-	std::vector<char> romBytes;
+	std::vector<std::byte> romBytes;
 
 	ips::record record {};
 	ips::eof eof {};
@@ -36,13 +26,13 @@ rom rom::read_ips( std::istream& streamSource ) {
 		if ( std::holds_alternative<ips::record::copy_type>( record.data ) ) {
 			const auto& copy = std::get<ips::record::copy_type>( record.data );
 
-			romBytes.resize( record.offset + copy.size(), '\xff' );
-			std::copy( std::begin( copy ), std::end( copy ), std::begin( romBytes ) + record.offset );
+			romBytes.resize( record.offset + copy.size(), std::byte { 0xff } );
+			std::copy( std::cbegin( copy ), std::cend( copy ), std::begin( romBytes ) + record.offset );
 		} else if ( std::holds_alternative<ips::record::fill_type>( record.data ) ) {
 			const auto& fill = std::get<ips::record::fill_type>( record.data );
 
-			romBytes.resize( static_cast<std::size_t>( record.offset ) + fill.size, '\xff' );
-			std::fill( std::begin( romBytes ) + record.offset + fill.size, std::begin( romBytes ) + record.offset + fill.size, fill.data );
+			romBytes.resize( static_cast<std::size_t>( record.offset ) + fill.size, std::byte { 0xff } );
+			std::fill_n( std::begin( romBytes ) + record.offset, fill.size, fill.data );
 		}
 
 		hash << record;
@@ -56,9 +46,5 @@ rom rom::read_ips( std::istream& streamSource ) {
 		streamSource.seekg( start );
 	}
 
-	if ( hash != rpge_constants::crc32 ) [[unlikely]] {
-		throw std::invalid_argument( "Stream is not RPGe v1.1" );
-	}
-
-	return rom {};
+	return rom { romBytes, hash };
 }

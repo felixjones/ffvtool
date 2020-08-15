@@ -2,6 +2,9 @@
 #define FFV_ROM_HPP
 
 #include <istream>
+#include <vector>
+
+#include "crc.hpp"
 
 namespace ffv {
 
@@ -9,10 +12,19 @@ class rom {
 public:
 	static rom read_ips( std::istream& streamSource );
 
-protected:
-	// rom() : m_memory(  ) {}
+	constexpr auto& data() const noexcept {
+		return m_data;
+	}
 
-	//const std::unique_ptr<const char[]>	m_memory;
+	constexpr auto& hash() const noexcept {
+		return m_hash;
+	}
+
+protected:
+	rom( const std::vector<std::byte>& data, const crc32& hash ) noexcept : m_data { std::move( data ) }, m_hash { std::move( hash ) } {}
+
+	const std::vector<std::byte>	m_data;
+	const crc32						m_hash;
 
 };
 
