@@ -10,7 +10,11 @@ namespace ffv {
 
 class rom {
 public:
-	static rom read_ips( std::istream& streamSource );
+	using vector_type = std::vector<std::byte>;
+	using size_type = vector_type::size_type;
+
+	static rom	read_ips( std::istream& streamSource );
+	static rom	read_rom( std::istream& streamSource );
 
 	constexpr auto& data() const noexcept {
 		return m_data;
@@ -20,11 +24,15 @@ public:
 		return m_hash;
 	}
 
-protected:
-	rom( const std::vector<std::byte>& data, const crc32& hash ) noexcept : m_data { std::move( data ) }, m_hash { std::move( hash ) } {}
+	auto at( const size_type pos ) const noexcept {
+		return m_data.at( pos );
+	}
 
-	const std::vector<std::byte>	m_data;
-	const crc32						m_hash;
+protected:
+	rom( const std::vector<std::byte>& data, const crc32& hash ) noexcept : m_data { data }, m_hash { hash } {}
+
+	const vector_type	m_data;
+	const crc32			m_hash;
 
 };
 

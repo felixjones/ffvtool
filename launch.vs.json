@@ -7,7 +7,7 @@
       "project": "CMakeLists.txt",
       "projectTarget": "ffvtool.exe",
       "name": "ffvtool.exe",
-      "args": [ "\"${workspaceRoot}\\roms\\ff5-v110.ips\" \"${workspaceRoot}\\roms\\Final Fantasy V Advance (U).gba\"" ]
+      "args": [ "\"${workspaceRoot}\\roms\\ff5-v110.ips\" \"${workspaceRoot}\\roms\\rpge.tbl\" 0x210200 0x2374b6 \"${workspaceRoot}\\roms\\Final Fantasy V Advance (E).gba\" \"${workspaceRoot}\\roms\\script.csv\"" ]
     }
   ]
 }

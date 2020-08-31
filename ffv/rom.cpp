@@ -48,3 +48,16 @@ rom rom::read_ips( std::istream& streamSource ) {
 
 	return rom { romBytes, hash };
 }
+
+rom rom::read_rom( std::istream& streamSource ) {
+	const auto streamStart = streamSource.tellg();
+
+	std::vector<std::byte> romBytes;
+	streamSource.seekg( 0, std::ios::end );
+	romBytes.resize( streamSource.tellg() );
+	streamSource.seekg( streamStart );
+
+	streamSource.read( ( char * )romBytes.data(), romBytes.size() );
+
+	return rom { romBytes, crc32().write( std::cbegin( romBytes ), std::cend( romBytes ) ) };
+}

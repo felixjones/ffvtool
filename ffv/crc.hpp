@@ -35,7 +35,7 @@ namespace detail {
 	template <typename Type>
 	static constexpr auto make_polynomial_table() noexcept {
 		std::array<Type, 256> table = {};
-		for ( auto jj = 0; jj < 256; ++jj ) {
+		for ( auto jj = 0; jj < table.size(); ++jj ) {
 			Type b = jj;
 			for ( auto kk = 0; kk < 8; ++kk ) {
 				b = ( b & 1 ? crc_constants<Type>::polynomial ^ ( b >> 1 ) : b >> 1 );
