@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace ffv {
@@ -35,6 +36,16 @@ public:
 
 		node * operator ->() noexcept {
 			return &m_owner.m_nodes[m_pos];
+		}
+
+		iterator& operator ++( int ) noexcept {
+			++m_pos;
+			return *this;
+		}
+
+		iterator& operator ++() noexcept {
+			++m_pos;
+			return *this;
 		}
 
 		iterator& find_next( const key_type& key ) noexcept {
@@ -105,7 +116,7 @@ public:
 		return m_nodes.size() == 1; // only root
 	}
 
-	iterator begin() const noexcept {
+	iterator begin() noexcept {
 		return iterator( *this, 0 );
 	}
 
@@ -160,6 +171,20 @@ protected:
 
 		const auto& value() const noexcept {
 			return m_value;
+		}
+
+		std::pair<iterator, bool> insert( const key_type& key ) noexcept {
+			auto iter = find( key );
+			if ( iter != m_owner->end() ) {
+				return std::make_pair( iter, false );
+			}
+
+			const auto index = static_cast<size_type>( m_owner->m_nodes.size() );
+			m_children.push_back( index );
+
+			const auto owner = m_owner;
+			owner->m_nodes.emplace_back( owner, index, key );
+			return std::make_pair( iterator( *owner, index ), true );
 		}
 
 		iterator find( const key_type& key ) noexcept {

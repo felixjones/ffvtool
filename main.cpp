@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <sstream>
 
+#include "ffv/gba_rom.hpp"
 #include "ffv/rom.hpp"
 #include "ffv/text_table.hpp"
 
@@ -27,8 +28,7 @@ int main( int argc, char * argv[] ) {
 		throw std::invalid_argument( "Specified text start address greater than text end address" );
 	}
 
-	// TODO : Replace this with a custom seekable stream reader (don't need hash, we should use header)
-	const auto gbaRom = ffv::rom::read_rom( std::ifstream( argv[5], std::ios::binary ) );
+	const auto gbaRom = ffv::gba_rom::load( std::ifstream( argv[5], std::ios::binary ) );
 
 	auto file = std::ofstream( argv[6] );
 	std::size_t count = 0;
