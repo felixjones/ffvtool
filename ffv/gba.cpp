@@ -1,4 +1,4 @@
-#include "gba_rom.hpp"
+#include "gba.hpp"
 
 #include "agb_huff.hpp"
 #include "tree.hpp"
@@ -7,10 +7,35 @@ using namespace ffv;
 
 namespace detail {
 
-template <typename... Ts>
-constexpr auto make_byte_array( Ts&&... args ) noexcept -> std::array<std::byte, sizeof...( Ts )> {
-	return { std::byte( std::forward<Ts>( args ) )... };
-}
+	template <typename... Ts>
+	constexpr auto make_byte_array( Ts&&... args ) noexcept -> std::array<std::byte, sizeof...( Ts )> {
+		return { std::byte( std::forward<Ts>( args ) )... };
+	}
+
+	template <typename Type>
+	auto& read( std::istream& stream, Type& outValue ) noexcept {
+		std::array<char, sizeof( Type )> buffer;
+		stream.read( buffer.data(), buffer.size() );
+		outValue = std::bit_cast<Type>( buffer );
+		return outValue;
+	}
+
+	template <typename Type>
+	auto read( std::istream& stream ) noexcept {
+		std::array<char, sizeof( Type )> buffer;
+		stream.read( buffer.data(), buffer.size() );
+		return std::bit_cast<Type>( buffer );
+	}
+
+	std::uint8_t read_complement( std::istream& stream ) noexcept {
+		std::array<char, 28> buffer;
+		stream.read( buffer.data(), buffer.size() );
+		std::uint8_t complement = 0;
+		for ( const auto& byte : buffer ) {
+			complement += byte;
+		}
+		return -( complement + 0x19 );
+	}
 
 } // detail
 
@@ -80,46 +105,23 @@ static bool check_nintendo_logo( std::istream& streamSource ) noexcept {
 	return true;
 }
 
-gba_rom gba_rom::load( std::istream& streamSource ) {
-	const auto start = static_cast<std::size_t>( streamSource.tellg() );
+gba::header gba::read_header( std::istream& stream ) noexcept {
+	gba::header header;
 
-	streamSource.seekg( start + 0x004 );
+	stream.seekg( 4, std::istream::cur );
+	header.logo_code = check_nintendo_logo( stream );
+	stream.read( header.software_title.data(), header.software_title.size() );
+	stream.read( header.game_serial.data(), header.game_serial.size() );
+	stream.read( header.maker.data(), header.maker.size() );
+	header.fixed = detail::read<std::uint8_t>( stream ) == 0x96;
+	const auto device = detail::read<std::uint16_t>( stream );
+	stream.seekg( 7, std::istream::cur );
+	detail::read( stream, header.version );
+	const auto complement = detail::read<std::uint8_t>( stream );
 
-	const auto hasLogo = check_nintendo_logo( streamSource );
-
-	std::array<char, 12> title;
-	streamSource.read( title.data(), title.size() );
-
-	std::array<char, 6> gameCode;
-	streamSource.read( gameCode.data(), gameCode.size() );
-
-	char constant96;
-	streamSource >> constant96;
-	if ( constant96 != static_cast<char>( 0x96 ) ) {
-		throw std::runtime_error( "Missing constant value 0x96" );
-	}
-
-	streamSource.seekg( start + 0x0bc );
-
-	std::uint8_t version;
-	streamSource >> version;
-
-	std::uint8_t crc;
-	streamSource >> crc;
-
-	streamSource.seekg( start + 0x0a0 );
-	std::array<char, 0x0bc - 0x0a0> buf;
-	streamSource.read( buf.data(), buf.size() );
-
-	std::uint8_t chk = 0;
-	for ( const auto& c : buf ) {
-		chk += c;
-	}
-	chk = -( 0x19 + chk );
-
-	if ( crc != crc ) {
-		throw std::runtime_error( "Header checksum fail" );
-	}
-
-	return gba_rom { hasLogo, title, std::bit_cast<gba_rom::game_code>( gameCode ), version };
+	stream.seekg( -30, std::istream::cur );
+	header.complement = detail::read_complement( stream ) == complement;
+	header.device = static_cast<device_type>( device & 0x7fff );
+	header.debugger = device & 0x8000;
+	return header;
 }

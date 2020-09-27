@@ -14,7 +14,6 @@ public:
 	using size_type = vector_type::size_type;
 
 	static rom	read_ips( std::istream& streamSource );
-	static rom	read_rom( std::istream& streamSource );
 
 	constexpr auto& data() const noexcept {
 		return m_data;
@@ -29,7 +28,7 @@ public:
 	}
 
 protected:
-	rom( const std::vector<std::byte>& data, const crc32& hash ) noexcept : m_data { data }, m_hash { hash } {}
+	rom( const vector_type& data, const crc32& hash ) noexcept : m_data { data }, m_hash { hash } {}
 
 	const vector_type	m_data;
 	const crc32			m_hash;

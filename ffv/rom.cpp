@@ -49,15 +49,56 @@ rom rom::read_ips( std::istream& streamSource ) {
 	return rom { romBytes, hash };
 }
 
-rom rom::read_rom( std::istream& streamSource ) {
-	const auto streamStart = streamSource.tellg();
+/*
+rom rom::read_gba( std::istream& streamSource ) {
+	const auto start = static_cast<std::size_t>( streamSource.tellg() );
 
-	std::vector<std::byte> romBytes;
-	streamSource.seekg( 0, std::ios::end );
-	romBytes.resize( streamSource.tellg() );
-	streamSource.seekg( streamStart );
+	streamSource.seekg( start + 0x0b2 );
 
-	streamSource.read( ( char * )romBytes.data(), romBytes.size() );
+	char constant96;
+	streamSource >> constant96;
+	if ( constant96 != static_cast<char>( 0x96 ) ) {
+		throw std::runtime_error( "Missing constant value 0x96" );
+	}
 
-	return rom { romBytes, crc32().write( std::cbegin( romBytes ), std::cend( romBytes ) ) };
+
+	streamSource.seekg( start + 0x004 );
+
+	//const auto hasLogo = check_nintendo_logo( streamSource );
+
+	std::array<char, 12> title;
+	streamSource.read( title.data(), title.size() );
+
+	std::array<char, 6> gameCode;
+	streamSource.read( gameCode.data(), gameCode.size() );
+
+	char constant96;
+	streamSource >> constant96;
+	if ( constant96 != static_cast<char>( 0x96 ) ) {
+		throw std::invalid_argument( "Stream is not GBA ROM (constant value 0x96 not found)" );
+	}
+
+	streamSource.seekg( start + 0x0bc );
+
+	std::uint8_t version;
+	streamSource >> version;
+
+	std::uint8_t crc;
+	streamSource >> crc;
+
+	streamSource.seekg( start + 0x0a0 );
+	std::array<char, 0x0bc - 0x0a0> buf;
+	streamSource.read( buf.data(), buf.size() );
+
+	std::uint8_t chk = 0;
+	for ( const auto& c : buf ) {
+		chk += c;
+	}
+	chk = -( 0x19 + chk );
+
+	if ( crc != crc ) {
+		throw std::runtime_error( "Header checksum fail" );
+	}
 }
+
+*/

@@ -1,8 +1,9 @@
 ﻿#include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 
-#include "ffv/gba_rom.hpp"
+#include "ffv/gba.hpp"
 #include "ffv/rom.hpp"
 #include "ffv/text_table.hpp"
 
@@ -28,7 +29,21 @@ int main( int argc, char * argv[] ) {
 		throw std::invalid_argument( "Specified text start address greater than text end address" );
 	}
 
-	const auto gbaRom = ffv::gba_rom::load( std::ifstream( argv[5], std::ios::binary ) );
+	auto gbaStream = std::ifstream( argv[5], std::ios::binary );
+	const auto gbaStart = gbaStream.tellg();
+
+	const auto gbaHeader = ffv::gba::read_header( std::ifstream( argv[5], std::ios::binary ) );
+	if ( !gbaHeader.logo_code ) {
+		std::cout << "Warning: GBA header missing logo\n";
+	}
+	if ( !gbaHeader.fixed ) {
+		std::cout << "Warning: GBA header missing fixed byte 0x96\n";
+	}
+	if ( !gbaHeader.complement ) {
+		std::cout << "Warning: GBA header complement check fail\n";
+	}
+
+	// gba::read_something
 
 	auto file = std::ofstream( argv[6] );
 	std::size_t count = 0;
