@@ -1,6 +1,10 @@
 #include "gba.hpp"
 
+#include <algorithm>
+#include <string>
+
 #include "agb_huff.hpp"
+#include "istream_find.hpp"
 #include "tree.hpp"
 
 using namespace ffv;
@@ -36,6 +40,10 @@ namespace detail {
 		}
 		return -( complement + 0x19 );
 	}
+
+	static constexpr auto font_table_header = detail::make_byte_array(
+		0x00, 0x00, 0x00, 0x00, 'F', 'O', 'N', 'T'
+	);
 
 } // detail
 
@@ -124,4 +132,52 @@ gba::header gba::read_header( std::istream& stream ) noexcept {
 	header.device = static_cast<device_type>( device & 0x7fff );
 	header.debugger = device & 0x8000;
 	return header;
+}
+
+std::istream& gba::find_font_table( std::istream& stream ) noexcept {
+	return find( stream, detail::font_table_header );
+}
+
+gba::font_table gba::read_font_table( std::istream& stream ) {
+	static constexpr auto unknown_byte_count = 256;
+
+	using header_type = std::remove_const_t<typename decltype( detail::font_table_header )>;
+
+	const auto header = detail::read<header_type>( stream );
+	if ( header != detail::font_table_header ) [[unlikely]] {
+		throw std::invalid_argument( "Stream is not a font table" );
+	}
+
+	font_table fontTable {};
+	detail::read( stream, fontTable.height );
+
+	if ( const auto bitDepth = detail::read<std::uint8_t>( stream ); bitDepth != 2 ) [[unlikely]] {		
+		throw std::invalid_argument( std::string( "Font table has unexpected bit depth (expected 2, got " ) + std::to_string( static_cast<int>( bitDepth ) ) + ")" );
+	}
+
+	fontTable.glyphs.reserve( detail::read<std::uint16_t>( stream ) );
+
+	stream.seekg( unknown_byte_count, std::istream::cur );
+
+	std::generate_n( std::back_inserter( fontTable.glyphs ), fontTable.glyphs.capacity(), [&stream, tableStart = stream.tellg(), height = fontTable.height]() {
+		const auto offset = detail::read<std::uint32_t>( stream );
+		const auto next = stream.tellg();
+
+		stream.seekg( offset + tableStart );
+
+		font_glyph glyph {};
+		detail::read( stream, glyph.advance );
+		detail::read( stream, glyph.stride );
+		glyph.data.reserve( static_cast<std::size_t>( height ) * glyph.stride );
+
+		std::generate_n( std::back_inserter( glyph.data ), glyph.data.capacity(), [&stream]() {
+			return detail::read<std::byte>( stream );
+		} );
+
+		stream.seekg( next );
+
+		return glyph;
+	} );
+
+	return fontTable;
 }

@@ -13,7 +13,7 @@ struct rpge_constants {
 };
 
 int main( int argc, char * argv[] ) {
-	const auto ipsRom = ffv::rom::read_ips( std::ifstream( argv[1], std::ios::binary ) );
+	const auto ipsRom = ffv::rom::read_ips( std::ifstream( argv[1], std::istream::binary ) );
 	if ( ipsRom.hash() != rpge_constants::crc32 ) [[unlikely]] {
 		throw std::invalid_argument( "Stream is not RPGe v1.1" );
 	}
@@ -29,10 +29,10 @@ int main( int argc, char * argv[] ) {
 		throw std::invalid_argument( "Specified text start address greater than text end address" );
 	}
 
-	auto gbaStream = std::ifstream( argv[5], std::ios::binary );
+	auto gbaStream = std::ifstream( argv[5], std::istream::binary );
 	const auto gbaStart = gbaStream.tellg();
 
-	const auto gbaHeader = ffv::gba::read_header( std::ifstream( argv[5], std::ios::binary ) );
+	const auto gbaHeader = ffv::gba::read_header( gbaStream );
 	if ( !gbaHeader.logo_code ) {
 		std::cout << "Warning: GBA header missing logo\n";
 	}
@@ -43,7 +43,13 @@ int main( int argc, char * argv[] ) {
 		std::cout << "Warning: GBA header complement check fail\n";
 	}
 
-	// gba::read_something
+	gbaStream.seekg( gbaStart );
+	ffv::gba::find_font_table( gbaStream );
+	if ( !gbaStream.good() ) [[unlikely]] {
+		throw std::invalid_argument( "Missing font table" );
+	}
+
+	const auto fontTable = ffv::gba::read_font_table( gbaStream );
 
 	auto file = std::ofstream( argv[6] );
 	std::size_t count = 0;

@@ -4,7 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <istream>
-#include <string_view>
+#include <vector>
 
 namespace ffv {
 namespace gba {
@@ -30,6 +30,21 @@ struct header {
 };
 
 header	read_header( std::istream& stream ) noexcept;
+
+std::istream&	find_font_table( std::istream& stream ) noexcept;
+
+struct font_glyph {
+	std::uint8_t			advance;
+	std::uint8_t			stride;
+	std::vector<std::byte>	data;
+};
+
+struct font_table {
+	std::uint8_t			height;
+	std::vector<font_glyph>	glyphs;
+};
+
+font_table	read_font_table( std::istream& stream );
 
 } // gba
 } // ffv
