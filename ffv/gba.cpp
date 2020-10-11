@@ -114,7 +114,7 @@ static bool check_nintendo_logo( std::istream& streamSource ) noexcept {
 }
 
 gba::header gba::read_header( std::istream& stream ) noexcept {
-	gba::header header;
+	gba::header header {};
 
 	stream.seekg( 4, std::istream::cur );
 	header.logo_code = check_nintendo_logo( stream );

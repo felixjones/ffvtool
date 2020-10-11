@@ -38,13 +38,23 @@ public:
 			return &m_owner.m_nodes[m_pos];
 		}
 
-		iterator& operator ++( int ) noexcept {
-			++m_pos;
+		iterator& operator=( const iterator& other ) noexcept {
+			m_pos = other.m_pos;
 			return *this;
 		}
 
-		iterator& operator ++() noexcept {
-			++m_pos;
+		iterator operator ++( int ) noexcept {
+			const auto pos = m_pos++;
+			if ( m_pos >= m_owner.m_nodes.size() ) {
+				m_pos = -1;
+			}
+			return iterator( m_owner, pos );
+		}
+
+		iterator& operator ++() noexcept {			
+			if ( ++m_pos >= m_owner.m_nodes.size() ) {
+				m_pos = -1;
+			}
 			return *this;
 		}
 
@@ -87,6 +97,26 @@ public:
 
 		const node * operator ->() const noexcept {
 			return &m_owner.m_nodes[m_pos];
+		}
+
+		const_iterator& operator=( const const_iterator& other ) noexcept {
+			m_pos = other.m_pos;
+			return *this;
+		}
+
+		const_iterator operator ++( int ) noexcept {
+			const auto pos = m_pos++;
+			if ( m_pos >= m_owner.m_nodes.size() ) {
+				m_pos = -1;
+			}
+			return const_iterator( m_owner, pos );
+		}
+
+		const_iterator& operator ++() noexcept {
+			if ( ++m_pos >= m_owner.m_nodes.size() ) {
+				m_pos = -1;
+			}
+			return *this;
 		}
 
 		const_iterator& find_next( const key_type& key ) noexcept {

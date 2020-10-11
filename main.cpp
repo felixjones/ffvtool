@@ -18,9 +18,9 @@ int main( int argc, char * argv[] ) {
 		throw std::invalid_argument( "Stream is not RPGe v1.1" );
 	}
 
-	const auto textTable = ffv::text_table::read( std::ifstream( argv[2] ) );
-	if ( textTable.empty() ) [[unlikely]] {
-		throw std::invalid_argument( "Invalid or corrupt text table" );
+	const auto sfcTextTable = ffv::text_table::read( std::ifstream( argv[2] ) );
+	if ( sfcTextTable.empty() ) [[unlikely]] {
+		throw std::invalid_argument( "Invalid or corrupt SFC text table" );
 	}
 
 	auto address = std::stoul( argv[3], nullptr, 16 );
@@ -51,25 +51,43 @@ int main( int argc, char * argv[] ) {
 
 	const auto fontTable = ffv::gba::read_font_table( gbaStream );
 
-	auto file = std::ofstream( argv[6] );
+	const auto gbaTextTable = ffv::text_table::read( std::ifstream( argv[6] ) );
+	if ( gbaTextTable.empty() ) [[unlikely]] {
+		throw std::invalid_argument( "Invalid or corrupt GBA text table" );
+	}
+
+	auto file = std::ofstream( argv[7] );
 	std::size_t count = 0;
 
 	const auto& rom = ipsRom.data();
 	std::optional<std::string> value;
 	while ( address <= end ) {
 		std::stringstream buffer;
+		std::stringstream gbaBuffer;
+
 		while ( rom[address] != rpge_constants::terminate ) {
 			const auto start = address;
-			for ( auto it = textTable.find( rom[address++] ); it != textTable.cend(); it.find_next( rom[address++] ) ) {
+			for ( auto it = sfcTextTable.find( rom[address++] ); it != sfcTextTable.cend(); it.find_next( rom[address++] ) ) {
 				value = it->value();
 			}
 
 			if ( value.has_value() ) {
 				// Write string
 				buffer << value.value();
+
+				const auto gbaIt = std::find_if( gbaTextTable.cbegin(), gbaTextTable.cend(), [&value]( const auto& node ) {
+					return node.value() == value;
+				} );
+
+				if ( gbaIt != gbaTextTable.cend() && gbaIt->value().has_value() ) {
+					gbaBuffer << gbaIt->value().value();
+				} else [[unlikely]] {
+					std::cout << "Warning: Missing GBA equivalent key for: " << value.value() << '\n';
+				}
+
 				--address;
 				value = {};
-			} else {
+			} else [[unlikely]] {
 				// Write hex
 				buffer << '{' << std::setfill( '0' ) << std::setw( 2 ) << std::hex << static_cast<int>( rom[address - 1] ) << '}';
 				address = start + 1;
@@ -77,7 +95,7 @@ int main( int argc, char * argv[] ) {
 		}
 
 		if ( buffer.rdbuf()->in_avail() != 0 ) {
-			file << count++ << ',' << std::quoted( buffer.str(), '\"', '\"' ) << std::endl;
+			file << count++ << ',' << std::quoted( buffer.str(), '\"', '\"' ) << ',' << std::quoted( gbaBuffer.str(), '\"', '\"' ) << std::endl;
 		}
 
 		++address;
