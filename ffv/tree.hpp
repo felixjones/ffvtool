@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <stack>
 #include <utility>
 #include <vector>
 
@@ -168,6 +169,75 @@ public:
 
 	const_iterator find( const key_type& key ) const noexcept {
 		return m_nodes.front().find( key );
+	}
+
+	template <class Iter>
+	iterator find( Iter& first, Iter last ) noexcept {
+		auto it = find( *first++ );
+
+		do {
+			if ( it->value().has_value() ) {
+				return it;
+			}
+
+			it.find_next( *first );
+		} while ( it != end() && first++ != last );
+
+		return end();
+	}
+
+	template <class Iter>
+	const_iterator find( Iter& first, Iter last ) const noexcept {
+		auto it = find( *first );
+
+		do {
+			if ( it->value().has_value() ) {
+				return it;
+			}
+
+			it.find_next( *++first );
+		} while ( it != cend() && first != last );
+
+		return cend();
+	}
+
+	std::vector<key_type> rfind( const value_type& value ) const noexcept {
+		std::stack<size_type> route;
+
+		const auto end = std::find_if( cbegin(), cend(), [&value]( const auto& node ) {
+			return node.value() == value;
+		} );
+
+		if ( end == cend() ) {
+			return std::vector<key_type>();
+		}
+
+		route.push( end->m_index );
+
+		while ( true ) {
+			const auto step = std::find_if( cbegin(), cend(), [&route]( const auto& node ) {
+				return std::find( std::cbegin( node.m_children ), std::cend( node.m_children ), route.top() ) != std::cend( node.m_children );
+			} );
+
+			if ( step->m_index == 0 ) {
+				break; // Got back to root
+			}
+
+			if ( step == cend() ) {
+				return std::vector<key_type>(); // Failed to reach root
+			}
+
+			route.push( step->m_index );
+		}
+
+		std::vector<key_type> key;
+		key.reserve( route.size() );
+		while ( !route.empty() ) {
+			key.push_back( m_nodes[route.top()].m_key );
+			route.pop();
+		}
+
+		return key;
 	}
 
 	template <class Iter>
