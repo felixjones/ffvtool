@@ -158,6 +158,12 @@ int main( int argc, char * argv[] ) {
 		mutator.name_case( name );
 	}
 
+
+	mutator.dialog_reflow();
+
+	// TODO : Dialog reflow
+	// TODO : Text justification
+
 	return 0;
 }
 

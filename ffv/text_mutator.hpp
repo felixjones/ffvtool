@@ -16,6 +16,7 @@ public:
 	void	find_replace( const std::string_view& find, const std::string_view& replace );
 	bool	target_find_replace( const std::uint32_t index, const std::string_view& find, const std::string_view& replace );
 	void	name_case( const std::string_view& name );
+	void	dialog_reflow();
 
 protected:
 	std::vector<std::string>	m_lines;

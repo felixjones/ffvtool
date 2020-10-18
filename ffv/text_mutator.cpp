@@ -48,6 +48,18 @@ namespace detail {
 		return std::find( std::cbegin( both ), std::cend( both ), c ) != std::cend( both );
 	}
 
+	constexpr bool is_alpha_numeric( const char c ) noexcept {
+		constexpr auto digits = numbers();
+
+		return is_alphabetic( c ) || std::find( std::cbegin( digits ), std::cend( digits ), c ) != std::cend( digits );
+	}
+
+	constexpr bool is_upper( const char c ) noexcept {
+		constexpr auto upper = upper_alphabet();
+
+		return std::find( std::cbegin( upper ), std::cend( upper ), c ) != std::cend( upper );
+	}
+
 	constexpr bool is_upper( const std::string_view& sv ) noexcept {
 		constexpr auto lower = lower_alphabet();
 		constexpr auto upper = upper_alphabet();
@@ -62,6 +74,12 @@ namespace detail {
 		}
 
 		return hasUpper;
+	}
+
+	constexpr bool is_lower( const char c ) noexcept {
+		constexpr auto lower = lower_alphabet();
+
+		return std::find( std::cbegin( lower ), std::cend( lower ), c ) != std::cend( lower );
 	}
 
 	constexpr bool is_lower( const std::string_view& sv ) noexcept {
@@ -119,7 +137,7 @@ namespace detail {
 				return std::tolower( c );
 			} );
 		} else {
-			constexpr auto upper = upper_alphabet();
+			static constexpr auto upper = upper_alphabet();
 
 			result = in;
 			if ( std::find( std::cbegin( upper ), std::cend( upper ), casing[0] ) != std::cend( upper ) ) {
@@ -137,7 +155,7 @@ namespace detail {
 	}
 
 	std::string name_casing( const std::string_view& in ) noexcept {
-		constexpr auto upper = upper_alphabet();
+		static constexpr auto upper = upper_alphabet();
 
 		auto result = std::string { in };
 		if ( !result.empty() ) [[likely]] {
@@ -148,6 +166,219 @@ namespace detail {
 			}
 		}
 		return result;
+	}
+
+	std::string::size_type dialog_start( const std::string& str, std::string::size_type pos ) noexcept {
+		static constexpr auto bartz = std::string_view { "`02`" };
+		static constexpr auto colon = ':';
+		static constexpr auto space = ' ';
+
+		while ( str[pos] != colon ) {
+			--pos;
+		}
+
+		const bool isBartz = ( pos >= 4 && std::string_view( &str[pos - 4], 4 ) == bartz );
+		if ( !isBartz && pos >= 1 ) {
+			// Step back through alphabeticals
+			do {
+				--pos;
+			} while ( pos && ( str[pos - 1] == space || is_alphabetic( str[pos - 1] ) ) );
+		} else if ( isBartz ) {
+			pos -= 4;
+		}
+
+		return pos;
+	}
+
+	std::string::size_type dialog_end( const std::string& str, std::string::size_type pos ) noexcept {
+		static constexpr auto terminate = std::string_view { "`00`" };
+		static constexpr auto new_line = std::string_view { "`01`" };
+		static constexpr auto colon = ':';
+
+		while ( pos < str.size() ) {
+			if ( pos < str.size() - 4 ) {
+				const auto code = std::string_view( &str[pos], 4 );
+				if ( code == terminate ) {
+					return pos + 4;
+				}
+
+				if ( code == new_line ) {
+					const auto nextDialog = str.find( colon, pos + 4 );
+					if ( nextDialog != std::string::npos ) {
+						return dialog_start( str, nextDialog ) - 1;
+					}
+				}
+			}
+
+			do {
+				++pos;
+			} while ( is_alphabetic( str[pos] ) );
+		}
+
+		return pos - 1;
+	}
+
+	using dialog_range_type = std::pair<std::string::size_type, std::string::size_type>;
+
+	dialog_range_type find_dialog( const std::string& str, const dialog_range_type& range = { 0, 0 } ) noexcept {
+		if ( is_upper( str[range.second] ) ) {
+			const auto end = dialog_end( str, range.second + 1 );
+			return { range.second, end };
+		}
+
+		static constexpr auto colon = ':';
+
+		auto start = str.find( colon, range.second + 1 );
+		if ( start == std::string::npos ) {
+			return { std::string::npos, 0 };
+		}
+
+		auto end = dialog_end( str, start + 1 );
+		start = dialog_start( str, start );
+
+		return { start, end };
+	}
+
+	std::string::size_type find_terminal( const std::string& str, std::string::size_type pos ) noexcept {
+		static constexpr auto period = '.';
+		static constexpr auto exclaim = '!';
+		static constexpr auto question = '?';
+		static constexpr auto quote = '"';
+
+		while ( pos < str.size() ) {
+			if ( ( str[pos] == period && str[pos - 1] != period ) || str[pos] == exclaim || str[pos] == question ) {
+				++pos;
+				if ( str[pos] == quote || is_alpha_numeric( str[pos] ) ) {
+					return pos;
+				}
+			} else {
+				++pos;
+			}
+		}
+
+		return std::string::npos;
+	}
+
+	int remove_lines( std::string& str, int count ) noexcept {
+		static constexpr auto terminate = std::string_view { "`00`" };
+		static constexpr auto new_line = std::string_view { "`01`" };
+		static constexpr auto box_break = std::string_view { "`BX`" };
+
+		const auto terminates = std::string_view( &str[str.size() - 4], 4 ) == terminate;
+
+		auto pos = str.find( new_line );
+		while ( pos != std::string::npos ) {
+			str.erase( pos, new_line.size() );
+			
+			++count;
+			if ( !terminates && count % 4 == 0 ) {
+				str.insert( pos, box_break );
+			}
+
+			pos = str.find( new_line, pos );
+		}
+
+
+		const auto code = std::string_view( &str[str.size() - 4], 4 );
+		if ( !terminates && code != box_break ) {
+			str += new_line;
+		}
+
+		return count;
+	}
+
+	void remove_whitespace( std::string& str ) noexcept {
+		static constexpr auto space = ' ';
+		static constexpr auto control = '`';
+		static constexpr auto colon = ':';
+		static constexpr auto ellipsis = std::string_view { ".." };
+
+		static constexpr auto bartz = std::string_view { "`02`" };
+		static constexpr auto gil = std::string_view { "`10`" };
+		static constexpr auto item = std::string_view { "`11`" };
+		static constexpr auto ability = std::string_view { "`12`" };
+
+		// Erase start
+		while ( str[0] == space ) {
+			str.erase( 0, 1 );
+		}
+
+		// Erase multiples
+		auto start = str.find( space );
+		while ( start != std::string::npos ) {
+			auto end = start;
+			while ( str[end] == space ) {
+				end++;
+			}
+			const auto length = end - start - 1;
+			str.erase( start, length );
+
+			start = str.find( space, start + 1 );
+		}
+
+		// Erase either side of controls
+		start = str.find( space );
+		while ( start != std::string::npos ) {
+			auto end = start + 1;
+			if ( str[end] == control ) {
+				// Check for bartz, gil, etc
+				const auto code = std::string_view( &str[end], 4 );
+				if ( code != bartz && code != gil && code != item && code != ability ) {
+					do {
+						end++;
+					} while ( str[end] != control );
+
+					if ( str[end + 1] == space ) {
+						str.erase( end + 1, 1 );
+					}
+				}
+			}
+
+			start = str.find( space, start + 1 );
+		}
+
+		// Erase pre-grammar
+		start = str.find( space );
+		while ( start != std::string::npos ) {
+			if ( str[start - 1] != colon && !is_alpha_numeric( str[start - 1] ) && !is_alpha_numeric( str[start + 1] ) ) {
+				str.erase( start, 1 );
+				--start;
+			}
+			start = str.find( space, start + 1 );
+		}
+
+		// Erase after ellipsis
+		start = str.find( ellipsis );
+		while ( start != std::string::npos ) {
+			if ( str[start + ellipsis.size()] == space ) {
+				str.erase( start + ellipsis.size(), 1 );
+			}
+
+			start = str.find( ellipsis, start + 1 );
+		}
+	}
+
+	void uppercase_grammar( std::string& str ) noexcept {
+		static constexpr auto period = '.';
+
+		auto start = str.find( period );
+		while ( start != std::string::npos ) {
+			if ( is_lower( str[start + 1] ) ) {
+				str[start + 1] = std::toupper( str[start + 1] );
+			}
+			start = str.find( period, start + 1 );
+		}
+	}
+
+	void grammar_line( std::string& str ) noexcept {
+		static constexpr auto new_line = std::string_view { "`01`" };
+
+		auto pos = find_terminal( str, 0 );
+		while ( pos != std::string::npos ) {
+			str.insert( pos, new_line );
+
+			pos = find_terminal( str, pos + 1 );
+		}
 	}
 
 } // detail
@@ -266,6 +497,33 @@ void text_mutator::name_case( const std::string_view& name ) {
 			} else {
 				++find;
 			}
+		}
+	}
+}
+
+void text_mutator::dialog_reflow() {
+	for ( auto& line : m_lines ) {
+		int lineCount = 0;
+		detail::dialog_range_type pos { 0, 0 };
+		while ( true ) {
+			pos = detail::find_dialog( line, pos );
+			if ( pos.first > pos.second ) {
+				break;
+			}
+
+			const auto oldLength = ( pos.second - pos.first ) + 1;
+			const auto oldStr = line.substr( pos.first, oldLength );
+			line.erase( pos.first, oldLength );
+
+			auto newStr = oldStr;
+
+			lineCount = detail::remove_lines( newStr, lineCount );
+
+			detail::grammar_line( newStr );
+			detail::remove_whitespace( newStr );
+
+			line.insert( pos.first, newStr );
+			pos.second = pos.first + newStr.size() - 1;
 		}
 	}
 }
