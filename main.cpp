@@ -27,9 +27,11 @@ static constexpr std::pair<std::string_view, std::string_view> find_replace[] = 
 	{ "millenium", "millennium" },
 
 	{ "Adamantium", "Adamantite" },
+	{ "Ancient Library", "Library of the Ancients" },
 	{ "Boco", "Boko" },
 	{ "Cara", "Krile" },
 	{ "Carbunkle", "Carbuncle" },
+	{ "Coco", "Koko" },
 	{ "Corna", "Kornago" },
 	{ "Dohlm", "Dohlme" },
 	{ "Dorgan", "Dorgann" },
@@ -42,6 +44,7 @@ static constexpr std::pair<std::string_view, std::string_view> find_replace[] = 
 	{ "Grociana", "Gloceana" },
 	{ "Halikarnassos", "Halicarnassus" },
 	{ "Hiryuu", "Hiryu" },
+	{ "Hunter", "Ranger" },
 	{ "Jacole", "Jachol" },
 	{ "Kelb", "Quelb" },
 	{ "Kelgar", "Kelger" },
@@ -50,17 +53,22 @@ static constexpr std::pair<std::string_view, std::string_view> find_replace[] = 
 	{ "Lamia Harp", "Lamia's Harp" },
 	{ "Lonka", "Ronka" },
 	{ "Magisa", "Magissa" },
+	{ "Mediator", "Beastmaster" },
 	{ "Merugene", "Melusine" },
 	{ "Meteo", "Meteor" },
+	{ "Mimic", "Mime" },
 	{ "Mua", "Moore" },
 	{ "Rugor", "Regole" },
 	{ "Shinryuu", "Shinryu" },
+	{ "Steamship", "Fire-Powered Ship" },
 	{ "Worus", "Walse" },
 	{ "Zeza", "Xezat" },
 	{ "Zokk", "Zok" },
 };
 
 static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> targetted_find_replace[] = {
+	{ 651, "Ancient", "Library of" },
+	{ 651, "Library", "the Ancients" },
 	{ 889, "HAve", "Have" },
 	{ 1048, "Well,that", "Well, that" },
 	{ 1084, "Faris's", "Faris'" },
@@ -68,7 +76,11 @@ static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> t
 	{ 1202, "Galuf:It'll", "Galuf: It'll" },
 	{ 1217, "Guarde", "garde" },
 	{ 1887, "Leviathan:I", "Leviathan: I" },
+	{ 1921, "Ancient", "Library of" },
+	{ 1921, "Library", "the Ancients" },
 	{ 2029, "Jar", "Gourd" },
+	{ 2069, "Ancient", "Library of" },
+	{ 2069, "Library", "the Ancients" },
 };
 
 static constexpr std::string_view name_case[] = {
