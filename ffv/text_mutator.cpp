@@ -525,5 +525,26 @@ void text_mutator::dialog_reflow() {
 			line.insert( pos.first, newStr );
 			pos.second = pos.first + newStr.size() - 1;
 		}
+
+		std::uint32_t width = 0;
+		auto begin = std::cbegin( line );
+		while ( begin != std::cend( line ) ) {
+			auto end = begin + 1;
+			auto key = m_textTable.rfind( std::string( begin, end ) );
+			while ( key.empty() ) {
+				++end;
+				if ( end == std::cend( line ) ) {
+					break;
+				}
+				key = m_textTable.rfind( std::string( begin, end ) );
+			}
+
+			if ( key.size() == 1 ) {
+				width += m_fontTable.glyphs[static_cast<int>( key[0] )].advance;
+				// TODO : If width is too much, reflow to next line
+			}
+
+			begin = end;
+		}
 	}
 }

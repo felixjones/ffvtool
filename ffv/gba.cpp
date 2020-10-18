@@ -143,6 +143,8 @@ gba::font_table gba::read_font_table( std::istream& stream ) {
 
 	using header_type = std::remove_const_t<typename decltype( detail::font_table_header )>;
 
+	const auto tableStart = stream.tellg();
+
 	const auto header = detail::read<header_type>( stream );
 	if ( header != detail::font_table_header ) [[unlikely]] {
 		throw std::invalid_argument( "Stream is not a font table" );
@@ -159,7 +161,7 @@ gba::font_table gba::read_font_table( std::istream& stream ) {
 
 	stream.seekg( unknown_byte_count, std::istream::cur );
 
-	std::generate_n( std::back_inserter( fontTable.glyphs ), fontTable.glyphs.capacity(), [&stream, tableStart = stream.tellg(), height = fontTable.height]() {
+	std::generate_n( std::back_inserter( fontTable.glyphs ), fontTable.glyphs.capacity(), [&stream, tableStart, height = fontTable.height]() {
 		const auto offset = detail::read<std::uint32_t>( stream );
 		const auto next = stream.tellg();
 
