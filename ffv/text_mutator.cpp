@@ -600,8 +600,12 @@ void text_mutator::dialog_reflow() {
 					while ( *begin != ' ' ) {
 						--begin;
 					}
-					
-					const auto index = std::distance( std::cbegin( line ), begin );
+
+					auto index = std::distance( std::cbegin( line ), begin );
+					if ( index > 2 && line[index - 1] != ' ' && line[index - 2] == ' ' ) {
+						index -= 2;
+					}
+
 					line.erase( index, 1 );
 					line.insert( index, new_line );
 					line.insert( index + 4, " " );
