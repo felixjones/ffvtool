@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "ffv/gba.hpp"
+#include "ffv/ips_writer.hpp"
 #include "ffv/rom.hpp"
 #include "ffv/text_mutator.hpp"
 #include "ffv/text_table.hpp"
@@ -67,6 +68,15 @@ static constexpr std::pair<std::string_view, std::string_view> find_replace[] = 
 };
 
 static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> targetted_find_replace[] = {
+	// 21
+	{ 22, "`1704`", "`1706`" }, { 22, "`1702`", "`1704`" },
+	{ 23, "`1704`", "`1706`" },
+	{ 24, "`1702`", "`1706`" },
+	{ 25, "`1701`", "`1702`" },
+	// 26 { 26, "`1702`", "`1702`" },
+	{ 27, "`1701`", "`1702`" },
+	// 28
+
 	{ 651, "Ancient", "Library of" },
 	{ 651, "Library", "the Ancients" },
 	{ 889, "HAve", "Have" },
@@ -114,12 +124,12 @@ int main( int argc, char * argv[] ) {
 	}
 
 	gbaStream.seekg( gbaStart );
-	ffv::gba::find_font_table( gbaStream );
+	ffv::gba::find_fonts( gbaStream );
 	if ( !gbaStream.good() ) [[unlikely]] {
 		throw std::invalid_argument( "Missing font table" );
 	}
 
-	const auto fontTable = ffv::gba::read_font_table( gbaStream );
+	const auto fontTable = ffv::gba::read_fonts( gbaStream );
 
 	const auto gbaTextTable = ffv::text_table::read( std::ifstream( argv[6] ) );
 	if ( gbaTextTable.empty() ) [[unlikely]] {
@@ -158,11 +168,69 @@ int main( int argc, char * argv[] ) {
 		mutator.name_case( name );
 	}
 
-
+	std::cout << "Reflowing dialog\n";
 	mutator.dialog_reflow();
 
-	// TODO : Dialog reflow
-	// TODO : Text justification
+	std::cout << "Writing IPS\n";
+	gbaStream.seekg( gbaStart );
+	ffv::gba::find_texts( gbaStream );
+	if ( !gbaStream.good() ) [[unlikely]] {
+		throw std::invalid_argument( "Missing text table" );
+	}
+
+	const auto textStart = gbaStream.tellg();
+	const auto textData = ffv::gba::read_texts( gbaStream );
+	const auto textBegin = std::stoul( argv[7], nullptr, 10 );
+
+	auto writer = ffv::ips::writer();
+
+	writer.seekg( textData.offsets[textBegin] + textStart );
+
+	int offsetIndex = 0;
+	std::uint32_t offset = textData.offsets[textBegin];
+	std::vector<std::uint32_t> offsets;
+	for ( const auto& line : mutator.lines() ) {
+		if ( offsetIndex == 2009 ) {
+			offsets.push_back( textData.offsets[2096] );
+			offsets.push_back( textData.offsets[2097] );
+			offsets.push_back( textData.offsets[2098] );
+		}
+		offsetIndex++;
+
+		offsets.push_back( offset );
+
+		auto begin = std::cbegin( line );
+		while ( begin != std::cend( line ) ) {
+			auto end = begin + 1;
+			auto key = gbaTextTable.rfind( std::string( begin, end ) );
+			while ( key.empty() ) {
+				if ( end == std::cend( line ) ) {
+					break;
+				}
+				++end;
+				key = gbaTextTable.rfind( std::string( begin, end ) );
+			}
+
+			if ( key.empty() ) [[unlikely]] {
+				std::cout << " WARNING No key for string \"" << std::string( begin, end ) << "\"\n";
+			}
+
+			offset += static_cast<std::uint32_t>( key.size() );
+			writer.write( std::cbegin( key ), std::cend( key ) );
+
+			begin = end;
+		}
+	}
+
+	writer.seekg( sizeof( textData.header ) + ( 4 * static_cast<std::size_t>( textBegin ) ) + textStart );
+	for ( const auto offset : offsets ) {
+		writer.write( offset );
+		offsetIndex++;
+	}
+
+	auto ips = std::ofstream( "C:\\Users\\felixjones\\source\\repos\\ffvtool\\roms\\testU\\out.ips", std::ostream::binary );
+	writer.compile( ips );
+	ips.close();
 
 	return 0;
 }

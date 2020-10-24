@@ -278,7 +278,6 @@ namespace detail {
 			pos = str.find( new_line, pos );
 		}
 
-
 		const auto code = std::string_view( &str[str.size() - 4], 4 );
 		if ( !terminates && code != box_break ) {
 			str += new_line;
@@ -502,6 +501,40 @@ void text_mutator::name_case( const std::string_view& name ) {
 }
 
 void text_mutator::dialog_reflow() {
+	constexpr auto nameChars = std::array<char, 73> {
+		'A', 'B', 'C', 'D', 'E', '0', '1', '2', '3', '4',
+		'F', 'G', 'H', 'I', 'J', '5', '6', '7', '8', '9',
+		'K', 'L', 'M', 'N', 'O', ' ',
+		'P', 'Q', 'R', 'S', 'T', '!', '?', '-', '+', '/',
+		'U', 'V', 'W', 'X', 'Y',
+		'Z',
+		'a', 'b', 'c', 'd', 'e',
+		'f', 'g', 'h', 'i', 'j',
+		'k', 'l', 'm', 'n', 'o',
+		'p', 'q', 'r', 's', 't',
+		'u', 'v', 'w', 'x', 'y',
+		'z'
+	};
+
+	static constexpr auto line_widths = std::array<std::uint32_t, 3> { 217, 217, 212 };
+	static constexpr auto new_line = std::string_view( "`01`" );
+
+	const auto newLine = m_textTable.rfind( std::string( new_line ) );
+	const auto boxBreak = m_textTable.rfind( "`BX`" );
+	const auto bartz = m_textTable.rfind( "`02`" );
+
+	std::uint8_t widestChar = 0;
+	for ( const auto c : nameChars ) {
+		const auto key = m_textTable.rfind( std::string { c } );
+		if ( key.size() == 1 ) {
+			const auto advance = m_fontTable.glyphs[static_cast<int>( key[0] )].advance;
+			if ( advance > widestChar ) {
+				widestChar = advance;
+			}
+		}
+	}
+	const auto bartzAdvance = 6 * widestChar;
+
 	for ( auto& line : m_lines ) {
 		int lineCount = 0;
 		detail::dialog_range_type pos { 0, 0 };
@@ -526,22 +559,61 @@ void text_mutator::dialog_reflow() {
 			pos.second = pos.first + newStr.size() - 1;
 		}
 
+		int lineIndex = 0;
 		std::uint32_t width = 0;
 		auto begin = std::cbegin( line );
 		while ( begin != std::cend( line ) ) {
 			auto end = begin + 1;
 			auto key = m_textTable.rfind( std::string( begin, end ) );
 			while ( key.empty() ) {
-				++end;
 				if ( end == std::cend( line ) ) {
 					break;
 				}
+				++end;
 				key = m_textTable.rfind( std::string( begin, end ) );
 			}
 
-			if ( key.size() == 1 ) {
-				width += m_fontTable.glyphs[static_cast<int>( key[0] )].advance;
-				// TODO : If width is too much, reflow to next line
+			if ( key == newLine ) {
+				++lineIndex;
+				width = 0;
+			} else if ( key == boxBreak ) {
+				auto index = std::distance( std::cbegin( line ), begin );
+				line.erase( index, 4 );
+
+				auto breakCount = 3 - lineIndex;
+				while ( breakCount-- ) {
+					line.insert( index, new_line );
+					index += 4;
+				}
+				end = std::cbegin( line ) + index;
+
+				lineIndex = 0;
+				width = 0;
+			} else if ( key.size() == 1 || key == bartz ) {
+				if ( key == bartz ) {
+					width += bartzAdvance;
+				} else {
+					width += m_fontTable.glyphs[static_cast<int>( key[0] )].advance;
+				}
+
+				if ( width > line_widths[lineIndex] ) {
+					while ( *begin != ' ' ) {
+						--begin;
+					}
+					
+					const auto index = std::distance( std::cbegin( line ), begin );
+					line.erase( index, 1 );
+					line.insert( index, new_line );
+					line.insert( index + 4, " " );
+					end = std::cbegin( line ) + index + 4;
+
+					++lineIndex;
+					width = 0;
+				}
+			}
+
+			if ( lineIndex == 3 ) {
+				lineIndex = 0;
 			}
 
 			begin = end;

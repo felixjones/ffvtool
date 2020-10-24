@@ -41,8 +41,12 @@ namespace detail {
 		return -( complement + 0x19 );
 	}
 
-	static constexpr auto font_table_header = detail::make_byte_array(
+	static constexpr auto font_header = detail::make_byte_array(
 		0x00, 0x00, 0x00, 0x00, 'F', 'O', 'N', 'T'
+	);
+
+	static constexpr auto text_header = detail::make_byte_array(
+		0x00, 0x00, 0x00, 0x00, 'T', 'E', 'X', 'T'
 	);
 
 } // detail
@@ -134,19 +138,23 @@ gba::header gba::read_header( std::istream& stream ) noexcept {
 	return header;
 }
 
-std::istream& gba::find_font_table( std::istream& stream ) noexcept {
-	return find( stream, detail::font_table_header );
+std::istream& gba::find_fonts( std::istream& stream ) noexcept {
+	return find( stream, detail::font_header );
 }
 
-gba::font_table gba::read_font_table( std::istream& stream ) {
+std::istream& gba::find_texts( std::istream& stream ) noexcept {
+	return find( stream, detail::text_header );
+}
+
+gba::font_table gba::read_fonts( std::istream& stream ) {
 	static constexpr auto unknown_byte_count = 256;
 
-	using header_type = std::remove_const_t<typename decltype( detail::font_table_header )>;
+	using header_type = std::remove_const_t<typename decltype( detail::font_header )>;
 
 	const auto tableStart = stream.tellg();
 
 	const auto header = detail::read<header_type>( stream );
-	if ( header != detail::font_table_header ) [[unlikely]] {
+	if ( header != detail::font_header ) [[unlikely]] {
 		throw std::invalid_argument( "Stream is not a font table" );
 	}
 
@@ -182,4 +190,33 @@ gba::font_table gba::read_font_table( std::istream& stream ) {
 	} );
 
 	return fontTable;
+}
+
+gba::text_data gba::read_texts( std::istream& stream ) {
+	using header_type = std::remove_const_t<typename decltype( detail::text_header )>;
+
+	const auto textStart = stream.tellg();
+
+	const auto header = detail::read<header_type>( stream );
+	if ( header != detail::text_header ) [[unlikely]] {
+		throw std::invalid_argument( "Stream is not a text table" );
+	}
+
+	text_data textData {};
+	detail::read( stream, textData.header );
+
+	textData.offsets.reserve( textData.header.translations * static_cast<std::size_t>( textData.header.textCount ) );
+
+	std::generate_n( std::back_inserter( textData.offsets ), textData.offsets.capacity(), [&stream]() {
+		return detail::read<std::uint32_t>( stream );
+	} );
+
+	const auto dataBytes = textData.header.size - sizeof( textData.header ) - textData.offsets.size() * 4 - sizeof( detail::text_header );
+	textData.data.reserve( dataBytes );
+
+	std::generate_n( std::back_inserter( textData.data ), textData.data.capacity(), [&stream]() {
+		return detail::read<std::byte>( stream );
+	} );
+
+	return textData;
 }

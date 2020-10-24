@@ -31,7 +31,8 @@ struct header {
 
 header	read_header( std::istream& stream ) noexcept;
 
-std::istream&	find_font_table( std::istream& stream ) noexcept;
+std::istream&	find_fonts( std::istream& stream ) noexcept;
+std::istream&	find_texts( std::istream& stream ) noexcept;
 
 struct font_glyph {
 	std::uint8_t			advance;
@@ -44,7 +45,22 @@ struct font_table {
 	std::vector<font_glyph>	glyphs;
 };
 
-font_table	read_font_table( std::istream& stream );
+font_table	read_fonts( std::istream& stream );
+
+struct text_data {
+	struct header {
+		std::uint32_t	translations : 8,
+			textCount : 24;
+		std::uint32_t	size;
+	};
+
+	header	header;
+
+	std::vector<std::uint32_t>	offsets;
+	std::vector<std::byte>		data;
+};
+
+text_data read_texts( std::istream& stream );
 
 } // gba
 } // ffv

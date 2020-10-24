@@ -18,6 +18,10 @@ public:
 	void	name_case( const std::string_view& name );
 	void	dialog_reflow();
 
+	const auto& lines() const noexcept {
+		return m_lines;
+	}
+
 protected:
 	std::vector<std::string>	m_lines;
 	const text_table::type&		m_textTable;
