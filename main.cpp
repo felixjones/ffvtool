@@ -77,6 +77,9 @@ static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> t
 	// 27
 	// 28
 
+	{ 37, "meteor?`01`", "meteor?`bx`" },
+	{ 40, "Huh?`01`", "Huh?`bx`" },
+
 	{ 651, "Ancient", "Library of" },
 	{ 651, "Library", "the Ancients" },
 	{ 889, "HAve", "Have" },
@@ -96,6 +99,18 @@ static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> t
 static constexpr std::string_view name_case[] = {
 	"Krile",
 	"Sandworm",
+};
+
+static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> targetted_post_find_replace[] = {
+	{ 41, "Help...", "`01` Help..." },
+	{ 175, "The warriors", "`01`The warriors" },
+	{ 178, "You might make a", "`01`You might make a" }, { 178, "First, select", "`01`First, select" },
+	{ 205, "The pirates", "`01` The pirates" }, { 205, "the`01`Pub...", "the Pub...`01` " },
+};
+
+static constexpr std::pair<std::uint32_t, std::string_view> dialog_mark[] = {
+	{ 175, "The warriors" },
+	{ 205, "... Hic!" },
 };
 
 int main( int argc, char * argv[] ) {
@@ -168,8 +183,31 @@ int main( int argc, char * argv[] ) {
 		mutator.name_case( name );
 	}
 
+	std::cout << "Marking manual dialogs\n";
+	for ( const auto& p : dialog_mark ) {
+		std::cout << "\t[" << p.first << "] " << p.second;
+		if ( !mutator.mark_dialog( p.first, p.second ) ) [[unlikely]] {
+			std::cout << " WARNING Nothing found\n";
+		} else [[likely]] {
+			std::cout << '\n';
+		}
+	}
+
 	std::cout << "Reflowing dialog\n";
 	mutator.dialog_reflow();
+
+	std::cout << "Reflowing the not dialog\n";
+	mutator.text_reflow();
+
+	std::cout << "Post indexed find replace\n";
+	for ( const auto& tuple : targetted_post_find_replace ) {
+		std::cout << "\t[" << std::get<0>( tuple ) << "] " << std::get<1>( tuple ) << " -> " << std::get<2>( tuple );
+		if ( !mutator.target_find_replace( std::get<0>( tuple ), std::get<1>( tuple ), std::get<2>( tuple ) ) ) [[unlikely]] {
+			std::cout << " WARNING Nothing found\n";
+		} else [[likely]] {
+			std::cout << '\n';
+		}
+	}
 
 	std::cout << "Writing IPS\n";
 	gbaStream.seekg( gbaStart );

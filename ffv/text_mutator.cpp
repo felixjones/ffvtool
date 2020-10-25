@@ -218,25 +218,87 @@ namespace detail {
 		return pos - 1;
 	}
 
-	using dialog_range_type = std::pair<std::string::size_type, std::string::size_type>;
+	bool skip_whitespace( const std::string& str, std::string::size_type& pos ) noexcept {
+		constexpr auto white_spaces = std::array<std::string_view, 2> {
+			std::string_view { " " }, // space
+			std::string_view { "`01`" } // new line
+		};
 
-	dialog_range_type find_dialog( const std::string& str, const dialog_range_type& range = { 0, 0 } ) noexcept {
-		if ( is_upper( str[range.second] ) ) {
-			const auto end = dialog_end( str, range.second + 1 );
-			return { range.second, end };
+		for ( const auto& sv : white_spaces ) {
+			if ( str.find( sv, pos ) == pos ) {
+				pos += sv.size();
+				return true;
+			}
 		}
 
-		static constexpr auto colon = ':';
+		return false;
+	}
 
-		auto start = str.find( colon, range.second + 1 );
-		if ( start == std::string::npos ) {
-			return { std::string::npos, 0 };
+	text_range_type find_white_space( const std::string& str, const std::string::size_type pos, int& numSpaces ) noexcept {
+		constexpr auto white_spaces = std::array<std::string_view, 2> {
+			std::string_view { " " }, // space
+			std::string_view { "`01`" } // new line
+		};
+
+		std::array<std::string::size_type, white_spaces.size()> spaceStarts;
+		for ( std::size_t ii = 0; ii < white_spaces.size(); ++ii ) {
+			spaceStarts[ii] = str.find( white_spaces[ii], pos );
 		}
 
-		auto end = dialog_end( str, start + 1 );
-		start = dialog_start( str, start );
+		const auto begin = std::min_element( std::cbegin( spaceStarts ), std::cend( spaceStarts ) );
+		auto end = *begin;
+		while ( skip_whitespace( str, end ) ) {
+			++numSpaces;
+		}
 
-		return { start, end };
+		return { *begin, end };
+	}
+
+	std::size_t count_line_breaks( const std::string& str, std::string::size_type start, const std::string::size_type end ) noexcept {
+		constexpr auto line_end = std::string_view { "`01`" };
+		std::size_t count = 0;
+		while ( start < end ) {
+			if ( str.find( line_end, start ) == start ) {
+				++count;
+				start += 4;
+			} else {
+				++start;
+			}
+		}
+		return count;
+	}
+
+	std::uint32_t count_trailing_spaces( const std::string& str, std::string::size_type start, const std::string::size_type end ) noexcept {
+		constexpr auto line_end = std::string_view { "`01`" };
+		constexpr auto space = std::string_view { " " };
+		std::uint32_t count = 0;
+		while ( start < end ) {
+			if ( str.find( line_end, start ) == start ) {
+				count = 0;
+				start += 4;
+				continue;
+			}
+
+			if ( str.find( space, start ) == start ) {
+				++count;
+			}
+			++start;
+		}
+		return count;
+	}
+
+	auto find_line_end( const std::string& str, const std::string::size_type pos ) noexcept {
+		constexpr auto line_end = std::array<std::string_view, 2> {
+			std::string_view { "`01`" }, // new line
+			std::string_view { "`00`" } // terminate
+		};
+
+		std::array<std::string::size_type, line_end.size()> lineEnds;
+		for ( std::size_t ii = 0; ii < line_end.size(); ++ii ) {
+			lineEnds[ii] = str.find( line_end[ii], pos );
+		}
+
+		return *std::min_element( std::cbegin( lineEnds ), std::cend( lineEnds ) );
 	}
 
 	std::string::size_type find_terminal( const std::string& str, std::string::size_type pos ) noexcept {
@@ -382,6 +444,24 @@ namespace detail {
 
 } // detail
 
+constexpr auto valid_name_chars = std::array<char, 73> {
+	'A', 'B', 'C', 'D', 'E', '0', '1', '2', '3', '4',
+	'F', 'G', 'H', 'I', 'J', '5', '6', '7', '8', '9',
+	'K', 'L', 'M', 'N', 'O', ' ',
+	'P', 'Q', 'R', 'S', 'T', '!', '?', '-', '+', '/',
+	'U', 'V', 'W', 'X', 'Y',
+	'Z',
+	'a', 'b', 'c', 'd', 'e',
+	'f', 'g', 'h', 'i', 'j',
+	'k', 'l', 'm', 'n', 'o',
+	'p', 'q', 'r', 's', 't',
+	'u', 'v', 'w', 'x', 'y',
+	'z'
+};
+
+static constexpr auto line_widths = std::array<std::uint32_t, 3> { 217, 217, 212 };
+static constexpr auto new_line = std::string_view( "`01`" );
+
 text_mutator::text_mutator( const std::vector<std::byte>& data, const text_table::type& textTable, const gba::font_table& fontTable) noexcept : m_textTable( textTable ), m_fontTable( fontTable ) {
 	static constexpr auto terminate = std::string_view { "`00`" };
 
@@ -413,6 +493,7 @@ text_mutator::text_mutator( const std::vector<std::byte>& data, const text_table
 	}
 
 	m_lines.shrink_to_fit();
+	m_dialogMarks.resize( m_lines.size() );
 }
 
 void text_mutator::find_replace( const std::string_view& find, const std::string_view& replace ) {
@@ -500,31 +581,9 @@ void text_mutator::name_case( const std::string_view& name ) {
 	}
 }
 
-void text_mutator::dialog_reflow() {
-	constexpr auto nameChars = std::array<char, 73> {
-		'A', 'B', 'C', 'D', 'E', '0', '1', '2', '3', '4',
-		'F', 'G', 'H', 'I', 'J', '5', '6', '7', '8', '9',
-		'K', 'L', 'M', 'N', 'O', ' ',
-		'P', 'Q', 'R', 'S', 'T', '!', '?', '-', '+', '/',
-		'U', 'V', 'W', 'X', 'Y',
-		'Z',
-		'a', 'b', 'c', 'd', 'e',
-		'f', 'g', 'h', 'i', 'j',
-		'k', 'l', 'm', 'n', 'o',
-		'p', 'q', 'r', 's', 't',
-		'u', 'v', 'w', 'x', 'y',
-		'z'
-	};
-
-	static constexpr auto line_widths = std::array<std::uint32_t, 3> { 217, 217, 212 };
-	static constexpr auto new_line = std::string_view( "`01`" );
-
-	const auto newLine = m_textTable.rfind( std::string( new_line ) );
-	const auto boxBreak = m_textTable.rfind( "`BX`" );
-	const auto bartz = m_textTable.rfind( "`02`" );
-
-	std::uint8_t widestChar = 0;
-	for ( const auto c : nameChars ) {
+std::uint32_t text_mutator::bartz_advance() const {
+	std::uint32_t widestChar = 0;
+	for ( const auto c : valid_name_chars ) {
 		const auto key = m_textTable.rfind( std::string { c } );
 		if ( key.size() == 1 ) {
 			const auto advance = m_fontTable.glyphs[static_cast<int>( key[0] )].advance;
@@ -533,13 +592,180 @@ void text_mutator::dialog_reflow() {
 			}
 		}
 	}
-	const auto bartzAdvance = 6 * widestChar;
+	return 6 * widestChar;
+}
+
+std::uint32_t text_mutator::gil_advance() const {
+	std::uint32_t widestChar = 0;
+	for ( const auto c : detail::numbers() ) {
+		const auto key = m_textTable.rfind( std::string { c } );
+		if ( key.size() == 1 ) {
+			const auto advance = m_fontTable.glyphs[static_cast<int>( key[0] )].advance;
+			if ( advance > widestChar ) {
+				widestChar = advance;
+			}
+		}
+	}
+	return widestChar * 7;
+}
+
+std::uint32_t text_mutator::measure( const std::string& line, const std::size_t start, const std::size_t end ) const {
+	const auto bartz = m_textTable.rfind( "`02`" );
+	const auto gil = m_textTable.rfind( "`10`" );
+
+	const auto bartzAdvance = bartz_advance();
+	const auto gilAdvance = gil_advance();
+
+	std::uint32_t width = 0;
+	auto begin = std::cbegin( line ) + start;
+	const auto stop = std::cbegin( line ) + end;
+	while ( begin < stop ) {
+		auto end = begin + 1;
+		auto key = m_textTable.rfind( std::string( begin, end ) );
+		while ( key.empty() ) {
+			if ( end == std::cend( line ) ) {
+				break;
+			}
+			++end;
+			key = m_textTable.rfind( std::string( begin, end ) );
+		}
+
+		if ( key == bartz ) {
+			width += bartzAdvance;
+		} else if ( key == gil ) {
+			width += gilAdvance;
+		} else if ( key.size() == 1 ) {
+			width += m_fontTable.glyphs[static_cast<int>( key[0] )].advance;
+		}
+
+		begin = end;
+	}
+
+	return width;
+}
+
+text_range_type text_mutator::find_dialog( const std::string& str, const text_range_type& range, const int markIndex ) noexcept {
+	if ( detail::is_upper( str[range.second] ) || str.find( "'", range.second ) == range.second || str.find( "\"", range.second ) == range.second ) {
+		const auto end = detail::dialog_end( str, range.second + 1 );
+		return { range.second, end };
+	}
+
+	static constexpr auto colon = ':';
+
+	auto start = str.find( colon, range.second + 1 );
+	if ( start == std::string::npos ) {
+		if ( markIndex >= 0 ) {
+			const auto marks = m_dialogMarks[markIndex];
+			for ( const auto m : marks ) {
+				if ( m >= range.second ) {
+					start = m;
+					auto end = detail::dialog_end( str, start + 1 );
+					return { start, end };
+				}
+			}
+		}
+
+		return { std::string::npos, 0 };
+	}
+
+	auto end = detail::dialog_end( str, start + 1 );
+	start = detail::dialog_start( str, start );
+
+	return { start, end };
+}
+
+void text_mutator::text_reflow() {
+	const auto spaceWidth = m_fontTable.glyphs[static_cast<int>( m_textTable.rfind( " " )[0] )].advance;
 
 	for ( auto& line : m_lines ) {
+		const auto dialog = find_dialog( line, { 0, 0 }, -1 );
+		if ( dialog.first < dialog.second ) {
+			continue;
+		}
+
+		bool valign = false;
+		std::vector<bool> alignments;
+		std::size_t start = 0;
+		while ( start < line.size() ) {
+			int count = 0;
+			const auto ws = detail::find_white_space( line, start, count );
+			if ( ws.first == std::string::npos ) {
+				break;
+			}
+
+			const auto newLines = detail::count_line_breaks( line, ws.first, ws.second );
+			const auto spaces = detail::count_trailing_spaces( line, ws.first, ws.second );
+			if ( ws.first == 0 || newLines ) {
+				alignments.push_back( spaces > 2 );
+			}
+
+			if ( ws.first == 0 && newLines ) {
+				valign = true;
+			}
+
+			const auto length = ws.second - ws.first;
+			if ( ws.first == 0 ) {
+				// Starts with whitespace, destroy all
+				line.erase( 0, ws.second );
+			} else if ( count > 1 ) {
+				line.erase( ws.first, length );
+
+				// More than 1 whitespace
+				if ( newLines ) {
+					// Has new lines (assumption)
+					line.insert( ws.first, new_line );
+					start = ws.first + new_line.size();
+				} else {
+					// Only spaces
+					line.insert( ws.first, " " );
+					start = ws.first + 1;
+				}
+			} else {
+				start = ws.second;
+			}
+		}
+
+		alignments.resize( detail::count_line_breaks( line, 0, line.size() ) + 1 );
+
+		std::size_t lineIndex = 0;
+		start = 0;
+		while ( start < line.size() ) {
+			const auto end = detail::find_line_end( line, start );
+			if ( alignments[lineIndex] ) {
+				const auto width = measure( line, start, end );
+				const auto spare = ( line_widths[lineIndex % line_widths.size()] - width ) / 2;
+				const auto padding = spare / spaceWidth;
+
+				line.insert( start, padding, ' ' );
+				start = end + padding + 4;
+			} else {
+				start = end + 4;
+			}
+
+			++lineIndex;
+		}
+
+		if ( valign && alignments.size() == 1 ) {
+			line.insert( 0, new_line );
+		}
+	}
+}
+
+void text_mutator::dialog_reflow() {
+	const auto newLine = m_textTable.rfind( std::string( new_line ) );
+	const auto boxBreak = m_textTable.rfind( "`BX`" );
+	const auto bartz = m_textTable.rfind( "`02`" );
+	const auto gil = m_textTable.rfind( "`10`" );
+
+	const auto bartzAdvance = bartz_advance();
+	const auto gilAdvance = gil_advance();
+
+	int markIndex = 0;
+	for ( auto& line : m_lines ) {
 		int lineCount = 0;
-		detail::dialog_range_type pos { 0, 0 };
+		text_range_type pos { 0, 0 };
 		while ( true ) {
-			pos = detail::find_dialog( line, pos );
+			pos = find_dialog( line, pos, markIndex );
 			if ( pos.first > pos.second ) {
 				break;
 			}
@@ -558,6 +784,7 @@ void text_mutator::dialog_reflow() {
 			line.insert( pos.first, newStr );
 			pos.second = pos.first + newStr.size() - 1;
 		}
+		++markIndex;
 
 		int lineIndex = 0;
 		std::uint32_t width = 0;
@@ -589,9 +816,11 @@ void text_mutator::dialog_reflow() {
 
 				lineIndex = 0;
 				width = 0;
-			} else if ( key.size() == 1 || key == bartz ) {
+			} else if ( key.size() == 1 || key == bartz || key == gil ) {
 				if ( key == bartz ) {
 					width += bartzAdvance;
+				} else if ( key == gil ) {
+					width += gilAdvance;
 				} else {
 					width += m_fontTable.glyphs[static_cast<int>( key[0] )].advance;
 				}
