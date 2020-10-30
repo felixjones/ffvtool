@@ -308,7 +308,7 @@ namespace detail {
 		static constexpr auto quote = '"';
 
 		while ( pos < str.size() ) {
-			if ( ( str[pos] == period && str[pos - 1] != period ) || str[pos] == exclaim || str[pos] == question ) {
+			if ( ( pos && str[pos] == period && str[pos - 1] != period ) || str[pos] == exclaim || str[pos] == question ) {
 				++pos;
 				if ( str[pos] == quote || is_alpha_numeric( str[pos] ) ) {
 					return pos;
@@ -324,13 +324,19 @@ namespace detail {
 	int remove_lines( std::string& str, int count ) noexcept {
 		static constexpr auto terminate = std::string_view { "`00`" };
 		static constexpr auto new_line = std::string_view { "`01`" };
-		static constexpr auto box_break = std::string_view { "`BX`" };
+		static constexpr auto new_line2 = std::string_view { "`nl`" };
+		static constexpr auto box_break = std::string_view { "`bx`" };
 
 		const auto terminates = std::string_view( &str[str.size() - 4], 4 ) == terminate;
 
 		auto pos = str.find( new_line );
+		pos = std::min( pos, str.find( new_line2 ) );
 		while ( pos != std::string::npos ) {
-			str.erase( pos, new_line.size() );
+			if ( str.substr( pos, 4 ) == new_line ) {
+				str.erase( pos, new_line.size() );
+			} else {
+				pos += 4;
+			}
 			
 			++count;
 			if ( !terminates && count % 4 == 0 ) {
@@ -338,6 +344,7 @@ namespace detail {
 			}
 
 			pos = str.find( new_line, pos );
+			pos = std::min( pos, str.find( new_line2, pos ) );
 		}
 
 		const auto code = std::string_view( &str[str.size() - 4], 4 );
@@ -438,7 +445,7 @@ namespace detail {
 		while ( pos != std::string::npos ) {
 			str.insert( pos, new_line );
 
-			pos = find_terminal( str, pos + 1 );
+			pos = find_terminal( str, pos + 4 );
 		}
 	}
 
@@ -462,7 +469,7 @@ constexpr auto valid_name_chars = std::array<char, 73> {
 static constexpr auto line_widths = std::array<std::uint32_t, 3> { 217, 217, 212 };
 static constexpr auto new_line = std::string_view( "`01`" );
 
-text_mutator::text_mutator( const std::vector<std::byte>& data, const text_table::type& textTable, const gba::font_table& fontTable) noexcept : m_textTable( textTable ), m_fontTable( fontTable ) {
+text_mutator::text_mutator( const std::vector<std::byte>& data, const text_table::type& textTable, const gba::font_table& fontTable, const std::size_t itemAdvance, const std::size_t abilityAdvance ) noexcept : m_textTable( textTable ), m_fontTable( fontTable ), m_itemAdvance( itemAdvance ), m_abilityAdvance( abilityAdvance ) {
 	static constexpr auto terminate = std::string_view { "`00`" };
 
 	std::stringstream buffer;
@@ -612,6 +619,8 @@ std::uint32_t text_mutator::gil_advance() const {
 std::uint32_t text_mutator::measure( const std::string& line, const std::size_t start, const std::size_t end ) const {
 	const auto bartz = m_textTable.rfind( "`02`" );
 	const auto gil = m_textTable.rfind( "`10`" );
+	const auto item = m_textTable.rfind( "`11`" );
+	const auto ability = m_textTable.rfind( "`12`" );
 
 	const auto bartzAdvance = bartz_advance();
 	const auto gilAdvance = gil_advance();
@@ -634,6 +643,10 @@ std::uint32_t text_mutator::measure( const std::string& line, const std::size_t 
 			width += bartzAdvance;
 		} else if ( key == gil ) {
 			width += gilAdvance;
+		} else if ( key == item ) {
+			width += m_itemAdvance;
+		} else if ( key == ability ) {
+			width += m_abilityAdvance;
 		} else if ( key.size() == 1 ) {
 			width += m_fontTable.glyphs[static_cast<int>( key[0] )].advance;
 		}
@@ -644,8 +657,8 @@ std::uint32_t text_mutator::measure( const std::string& line, const std::size_t 
 	return width;
 }
 
-text_range_type text_mutator::find_dialog( const std::string& str, const text_range_type& range, const int markIndex ) noexcept {
-	if ( detail::is_upper( str[range.second] ) || str.find( "'", range.second ) == range.second || str.find( "\"", range.second ) == range.second ) {
+text_range_type text_mutator::find_dialog( const std::string& str, const text_range_type& range, const int markIndex ) const noexcept {
+	if ( detail::is_upper( str[range.second] ) || str.find( "\"", range.second ) == range.second ) {
 		const auto end = detail::dialog_end( str, range.second + 1 );
 		return { range.second, end };
 	}
@@ -656,12 +669,16 @@ text_range_type text_mutator::find_dialog( const std::string& str, const text_ra
 	if ( start == std::string::npos ) {
 		if ( markIndex >= 0 ) {
 			const auto marks = m_dialogMarks[markIndex];
-			for ( const auto m : marks ) {
-				if ( m >= range.second ) {
-					start = m;
-					auto end = detail::dialog_end( str, start + 1 );
-					return { start, end };
+			for ( const auto& m : marks ) {
+				start = std::min( start, str.find( m, range.second ) );
+			}
+
+			if ( start != std::string::npos ) {
+				auto end = detail::dialog_end( str, start + 1 );
+				for ( const auto& m : marks ) {
+					end = std::min( end, str.find( m, start + 1 ) - 5 );
 				}
+				return { start, end };
 			}
 		}
 
@@ -675,6 +692,10 @@ text_range_type text_mutator::find_dialog( const std::string& str, const text_ra
 }
 
 void text_mutator::text_reflow() {
+	constexpr auto box_break = std::string_view { "`bx`" };
+	constexpr auto enforced_line_break = std::string_view { "`nl`" };
+
+	const auto newLine = m_textTable.rfind( std::string( new_line ) );
 	const auto spaceWidth = m_fontTable.glyphs[static_cast<int>( m_textTable.rfind( " " )[0] )].advance;
 
 	for ( auto& line : m_lines ) {
@@ -748,12 +769,54 @@ void text_mutator::text_reflow() {
 		if ( valign && alignments.size() == 1 ) {
 			line.insert( 0, new_line );
 		}
+
+		lineIndex = 0;
+		auto begin = std::cbegin( line );
+		while ( begin != std::cend( line ) ) {
+			auto end = begin + 1;
+			auto key = m_textTable.rfind( std::string( begin, end ) );
+			while ( key.empty() ) {
+				if ( end == std::cend( line ) ) {
+					break;
+				}
+				++end;
+				key = m_textTable.rfind( std::string( begin, end ) );
+			}
+
+			if ( key.empty() ) {
+				if ( std::string( begin, begin + box_break.size() ) == box_break ) {
+					auto index = std::distance( std::cbegin( line ), begin );
+					line.erase( index, box_break.size() );
+
+					auto breakCount = 3 - lineIndex;
+					while ( breakCount-- ) {
+						line.insert( index, new_line );
+						index += 4;
+					}
+					end = std::cbegin( line ) + index;
+
+					lineIndex = 0;
+				} else {
+					throw new std::runtime_error( "OMG FIX THIS" );
+				}
+			} else if ( key == newLine ) {
+				++lineIndex;
+			}
+
+			if ( lineIndex == 3 ) {
+				lineIndex = 0;
+			}
+
+			begin = end;
+		}
 	}
 }
 
 void text_mutator::dialog_reflow() {
+	constexpr auto box_break = std::string_view { "`bx`" };
+	constexpr auto enforced_line_break = std::string_view { "`nl`" };
+
 	const auto newLine = m_textTable.rfind( std::string( new_line ) );
-	const auto boxBreak = m_textTable.rfind( "`BX`" );
 	const auto bartz = m_textTable.rfind( "`02`" );
 	const auto gil = m_textTable.rfind( "`10`" );
 
@@ -768,6 +831,10 @@ void text_mutator::dialog_reflow() {
 			pos = find_dialog( line, pos, markIndex );
 			if ( pos.first > pos.second ) {
 				break;
+			}
+
+			if ( line[0] == '\'' ) {
+				int fifty = 50;
 			}
 
 			const auto oldLength = ( pos.second - pos.first ) + 1;
@@ -786,6 +853,13 @@ void text_mutator::dialog_reflow() {
 		}
 		++markIndex;
 
+		auto elb = line.find( enforced_line_break );
+		while ( elb != std::string::npos ) {
+			line.erase( elb, enforced_line_break.size() );
+			line.insert( elb, new_line );
+			elb = line.find( enforced_line_break, elb );
+		}
+
 		int lineIndex = 0;
 		std::uint32_t width = 0;
 		auto begin = std::cbegin( line );
@@ -800,21 +874,25 @@ void text_mutator::dialog_reflow() {
 				key = m_textTable.rfind( std::string( begin, end ) );
 			}
 
-			if ( key == newLine ) {
-				++lineIndex;
-				width = 0;
-			} else if ( key == boxBreak ) {
-				auto index = std::distance( std::cbegin( line ), begin );
-				line.erase( index, 4 );
+			if ( key.empty() ) {
+				if ( std::string( begin, begin + box_break.size() ) == box_break ) {
+					auto index = std::distance( std::cbegin( line ), begin );
+					line.erase( index, box_break.size() );
 
-				auto breakCount = 3 - lineIndex;
-				while ( breakCount-- ) {
-					line.insert( index, new_line );
-					index += 4;
+					auto breakCount = 3 - lineIndex;
+					while ( breakCount-- ) {
+						line.insert( index, new_line );
+						index += 4;
+					}
+					end = std::cbegin( line ) + index;
+
+					lineIndex = 0;
+					width = 0;
+				} else {
+					throw new std::runtime_error( "OMG FIX THIS" );
 				}
-				end = std::cbegin( line ) + index;
-
-				lineIndex = 0;
+			} else if ( key == newLine ) {
+				++lineIndex;
 				width = 0;
 			} else if ( key.size() == 1 || key == bartz || key == gil ) {
 				if ( key == bartz ) {

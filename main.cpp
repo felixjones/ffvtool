@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "ffv/gba.hpp"
+#include "ffv/gba_texts.hpp"
 #include "ffv/ips_writer.hpp"
 #include "ffv/rom.hpp"
 #include "ffv/text_mutator.hpp"
@@ -58,6 +59,7 @@ static constexpr std::pair<std::string_view, std::string_view> find_replace[] = 
 	{ "Merugene", "Melusine" },
 	{ "Meteo", "Meteor" },
 	{ "Mimic", "Mime" },
+	{ "Mold Wind", "Moldwynd" },
 	{ "Mua", "Moore" },
 	{ "Rugor", "Regole" },
 	{ "Shinryuu", "Shinryu" },
@@ -68,6 +70,10 @@ static constexpr std::pair<std::string_view, std::string_view> find_replace[] = 
 };
 
 static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> targetted_find_replace[] = {
+	{ 2, "Obtained", "   Obtained" },
+	{ 3, "Obtained", "   Obtained" },
+	{ 4, "Obtained", "   Obtained" },
+
 	// 21
 	{ 22, "`1704`", "`1706`" }, { 22, "`1702`", "`1704`" },
 	{ 23, "`1704`", "`1706`" },
@@ -80,6 +86,82 @@ static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> t
 	{ 37, "meteor?`01`", "meteor?`bx`" },
 	{ 40, "Huh?`01`", "Huh?`bx`" },
 
+	{ 112, "Received 8 Potions!", "`bx``nl`Received 8 Potions!" },
+
+	{ 144, "Received 5 Potions!", "`bx``nl`Received 5 Potions!" },
+
+	{ 169, "         These hold the powers`01`          of the ancient heroes`01`             that dwell within.", "          These hold the powers of the`01`       ancient heroes that dwell within." },
+
+	{ 209, "country called Walse. ", "country called Walse.`bx`" },
+
+	{ 238, "'Wait Mode'`01`", "'Wait Mode'`nl`" },
+	{ 238, "you choose your commands.  ", "you choose your commands.  `nl`" },
+
+	{ 240, "'Double Grip'`01`", "'Double Grip'`nl`" },
+	{ 240, "'Dash'`01`", "`nl`'Dash'`nl`" },
+	{ 240, "Having a Thief in your party is fine`01`  as well.", "Having a Thief in your party is fine`01`  as well.`nl`" },
+	{ 240, "'Blue Magic' and 'Learning'`01`", "'Blue Magic' and 'Learning'`nl`" },
+
+	{ 259, "Please, take this!`01``01``01``01``02`:  What is it?", "Please, take this!`01``02`:  What is it?`01``01``01`" },
+
+	{ 275, "Three Crystals...?`01`", "Three Crystals...?`bx`" },
+	{ 276, " shatter...?`01`", " shatter...?`bx`" },
+	{ 285, "wind...`01`  ... ... ...", "wind...`nl`...`nl`..." },
+
+	{ 289, "It couldn't be...", "It couldn't be...`nl`" },
+	{ 291, "Stand guard!!", "Stand guard!!`nl`" },
+	{ 294, "Let go!", "Let go!`nl`" }, { 294, "Let go of me!!!", "Let go of me!!!`nl`" },
+	{ 296, "This ship...", "This ship...`nl`" },
+	{ 297, "Faris...", "Faris...`nl`" },
+
+	{ 299, "through here?", "through here?`nl`" }, { 299, "What are you saying?", "What are you saying?`nl`" },
+
+	{ 300, "This place seems safe.", "This place seems safe.`nl`" },
+	{ 301, "clothes...", "clothes...`nl`" },
+	{ 303, "How can you say that?", "How can you say that?`nl`" },
+	{ 304, "Stop that!", "Stop that!`nl`" },
+	{ 309, "Hmph.", "Hmph.`nl`" },
+	{ 310, "Well, get over it.", "Well, get over it.`nl`" },
+	{ 311, "Aaaah, slept well...", "Aaaah, slept well...`nl`" },
+
+	{ 316, "`02`...", "`02`...`nl`" },
+	{ 318, "Lenna!?....", "Lenna!?....`nl`" },
+	{ 319, "Grandpa...", "Grandpa...`nl`" },
+	{ 320, "you...?", "you...?`nl`" },
+	{ 322, "Who the heck are you!?", "Who the heck are you!?`bx`" }, { 322, "Hrmph...", "Hrmph...`nl`" }, { 322, "you...?", "you...?`bx`" },
+	{ 324, "her!", "her!`nl`" },
+	{ 326, "Galuf!", "Galuf!`nl`" },
+
+	{ 328, "Obtained", "   Obtained" },
+
+	{ 339, "can't get to Walse.", "can't get to Walse.`nl`" },
+	{ 343, " sea.", " sea.`bx`" },
+	{ 354, "Mountain.", "Mountain.`bx`" },
+	{ 356, "pressing the Y", "pressing the R" },
+	{ 357, "hands!", "hands!`nl`" },
+	{ 361, "to stop them!", "to stop them!`nl`" },
+	{ 366, "What kind of dragon!?", "What kind of dragon!?`bx`" },
+	{ 368, "Hiryu's wounds...", "Hiryu's wounds...`nl`" },
+	{ 369, "we had the Hiryu.", "we had the Hiryu.`bx`" },
+
+	{ 373, "Hehehe...", "Hehehe...`nl`" }, { 373, "tough `01`", "tough " },
+
+	{ 381, "Hiryu...", "Hiryu...`nl`" },
+	{ 383, "alright.", "alright.`nl`" },
+	{ 384, "Hurry...", "Hurry...`nl`" },
+	{ 387, "Lenna's status", "  Lenna's status" }, { 387, "restored!`01``01``01`", "restored!`bx`" },
+
+	{ 486, "It's not just Tycoon...", "It's not just Tycoon...`nl`" },
+	{ 487, "And...", "And...`nl`" },
+	{ 489, "Father.", "Father.`nl`" },
+	{ 492, "Lenna...", "Lenna...`nl`" },
+	{ 494, "princess...?", "princess...?`nl`" },
+	{ 495, "But...", "But...`nl`" },
+	{ 496, "`02`!`01``01``01`", "`02`!`bx`" }, { 496, "`02`:  ...", "`02`:  ...`nl`" },
+
+	{ 1334, "King's room.", "King's room.`nl`" },
+
+	{ 1397, "Catch", "   Catch" },
 	{ 651, "Ancient", "Library of" },
 	{ 651, "Library", "the Ancients" },
 	{ 889, "HAve", "Have" },
@@ -103,14 +185,25 @@ static constexpr std::string_view name_case[] = {
 
 static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> targetted_post_find_replace[] = {
 	{ 41, "Help...", "`01` Help..." },
+	{ 174, "How to use the Pieces of Crystal", "       How to use the Pieces of Crystal" },
+		{ 174, "Would you like an explanation of the", "    Would you like an explanation of the" },
+		{ 174, "Job/Ability System?", "                  Job/Ability System?" },
 	{ 175, "The warriors", "`01`The warriors" },
 	{ 178, "You might make a", "`01`You might make a" }, { 178, "First, select", "`01`First, select" },
-	{ 205, "The pirates", "`01` The pirates" }, { 205, "the`01`Pub...", "the Pub...`01` " },
+	{ 205, "The pirates", "`01` The pirates" }, { 205, "the`01`Pub...", "the Pub...`01` " }, { 205, "Hiccup!...", " Hiccup!..." },
+	{ 240, "'Blue Magic' and 'Learning'", "`01`'Blue Magic' and 'Learning'" },
+	{ 357, "Hic!", " Hic!" },
+	{ 496, "...HUHN!", " ...HUHN!" },
+	{ 535, "That's good.", " That's good." },
+	{ 1334, "You need", " You need" },
 };
 
 static constexpr std::pair<std::uint32_t, std::string_view> dialog_mark[] = {
+	{ 174, "How to use the" }, { 174, "Would you like an" },
 	{ 175, "The warriors" },
 	{ 205, "... Hic!" },
+	{ 238, "'Wait Mode'" },
+	{ 240, "'Double Grip'" }, { 240, "'Dash'" }, { 240, "'Blue Magic' and 'Learning'" },
 };
 
 int main( int argc, char * argv[] ) {
@@ -139,6 +232,16 @@ int main( int argc, char * argv[] ) {
 	}
 
 	gbaStream.seekg( gbaStart );
+	ffv::gba::find_texts( gbaStream );
+	if ( !gbaStream.good() ) [[unlikely]] {
+		throw std::invalid_argument( "Missing text table" );
+	}
+
+	const auto textStart = gbaStream.tellg();
+	const auto textData = ffv::gba::read_texts( gbaStream );
+	const auto textBegin = std::stoul( argv[7], nullptr, 10 );
+
+	gbaStream.seekg( gbaStart );
 	ffv::gba::find_fonts( gbaStream );
 	if ( !gbaStream.good() ) [[unlikely]] {
 		throw std::invalid_argument( "Missing font table" );
@@ -151,6 +254,16 @@ int main( int argc, char * argv[] ) {
 		throw std::invalid_argument( "Invalid or corrupt GBA text table" );
 	}
 
+	const auto itemLength = ffv::gba::max_text_length( textData, {
+		{ 3313, 3431 },
+		{ 3440, 3529 },
+		{ 3535, 3570 },
+	}, gbaTextTable, fontTable );
+
+	const auto abilityLength = ffv::gba::max_text_length( textData, {
+		{ 4579, 4853 },
+	}, gbaTextTable, fontTable );
+
 	auto address = std::stoul( argv[3], nullptr, 16 );
 	const auto end = std::stoul( argv[4], nullptr, 16 );
 	if ( end < address ) [[unlikely]] {
@@ -159,7 +272,13 @@ int main( int argc, char * argv[] ) {
 
 	std::cout << "Translating to GBA\n";
 	const auto agbData = to_agb( ipsRom, address, end, sfcTextTable, gbaTextTable );
-	auto mutator = ffv::text_mutator( agbData, gbaTextTable, fontTable );
+	auto mutator = ffv::text_mutator( agbData, gbaTextTable, fontTable, itemLength, abilityLength );
+
+	std::cout << "Marking manual dialogs\n";
+	for ( const auto& p : dialog_mark ) {
+		std::cout << "\t[" << p.first << "] " << p.second << '\n';
+		mutator.mark_dialog( p.first, p.second );
+	}
 
 	std::cout << "Find replace\n";
 	for ( const auto& pair : find_replace ) {
@@ -183,16 +302,6 @@ int main( int argc, char * argv[] ) {
 		mutator.name_case( name );
 	}
 
-	std::cout << "Marking manual dialogs\n";
-	for ( const auto& p : dialog_mark ) {
-		std::cout << "\t[" << p.first << "] " << p.second;
-		if ( !mutator.mark_dialog( p.first, p.second ) ) [[unlikely]] {
-			std::cout << " WARNING Nothing found\n";
-		} else [[likely]] {
-			std::cout << '\n';
-		}
-	}
-
 	std::cout << "Reflowing dialog\n";
 	mutator.dialog_reflow();
 
@@ -210,15 +319,6 @@ int main( int argc, char * argv[] ) {
 	}
 
 	std::cout << "Writing IPS\n";
-	gbaStream.seekg( gbaStart );
-	ffv::gba::find_texts( gbaStream );
-	if ( !gbaStream.good() ) [[unlikely]] {
-		throw std::invalid_argument( "Missing text table" );
-	}
-
-	const auto textStart = gbaStream.tellg();
-	const auto textData = ffv::gba::read_texts( gbaStream );
-	const auto textBegin = std::stoul( argv[7], nullptr, 10 );
 
 	auto writer = ffv::ips::writer();
 
