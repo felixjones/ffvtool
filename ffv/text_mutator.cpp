@@ -366,6 +366,10 @@ namespace detail {
 		static constexpr auto item = std::string_view { "`11`" };
 		static constexpr auto ability = std::string_view { "`12`" };
 
+		if ( str.starts_with( "Huh?" ) ) {
+			int fifty  = 50;
+		}
+
 		// Erase start
 		while ( str[0] == space ) {
 			str.erase( 0, 1 );
@@ -409,8 +413,13 @@ namespace detail {
 		start = str.find( space );
 		while ( start != std::string::npos ) {
 			if ( str[start - 1] != colon && !is_alpha_numeric( str[start - 1] ) && !is_alpha_numeric( str[start + 1] ) ) {
-				str.erase( start, 1 );
-				--start;
+				if ( str[start - 1] == control ) {
+					const auto code = std::string_view( &str[start - 4], 4 );
+					if ( code != bartz && code != gil && code != item && code != ability ) {
+						str.erase( start, 1 );
+						--start;
+					}
+				}
 			}
 			start = str.find( space, start + 1 );
 		}
@@ -535,6 +544,11 @@ bool text_mutator::target_find_replace( const std::uint32_t index, const std::st
 	const auto lastAlphabet = detail::last_alphabet( find );
 
 	auto& line = m_lines[index];
+
+	if ( find.empty() ) {
+		line.insert( 0, replace );
+		return true;
+	}
 
 	bool replacedAny = false;
 	std::size_t cur = 0;
@@ -698,7 +712,12 @@ void text_mutator::text_reflow() {
 	const auto newLine = m_textTable.rfind( std::string( new_line ) );
 	const auto spaceWidth = m_fontTable.glyphs[static_cast<int>( m_textTable.rfind( " " )[0] )].advance;
 
+	int ll = 0;
 	for ( auto& line : m_lines ) {
+		if ( ll++ == 789 ) {
+			int fifty = 50;
+		}
+
 		const auto dialog = find_dialog( line, { 0, 0 }, -1 );
 		if ( dialog.first < dialog.second ) {
 			continue;
@@ -825,6 +844,10 @@ void text_mutator::dialog_reflow() {
 
 	int markIndex = 0;
 	for ( auto& line : m_lines ) {
+		if ( markIndex == 789 ) {
+			int fifty =50;
+		}
+
 		int lineCount = 0;
 		text_range_type pos { 0, 0 };
 		while ( true ) {
