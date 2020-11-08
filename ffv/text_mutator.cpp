@@ -308,7 +308,7 @@ namespace detail {
 		static constexpr auto quote = '"';
 
 		while ( pos < str.size() ) {
-			if ( ( pos && str[pos] == period && str[pos - 1] != period ) || str[pos] == exclaim || str[pos] == question ) {
+			if ( ( pos && str[pos] == period && str[pos - 1] != period && str[pos + 1] != quote ) || str[pos] == exclaim || str[pos] == question ) {
 				++pos;
 				if ( str[pos] == quote || is_alpha_numeric( str[pos] ) ) {
 					return pos;
@@ -365,10 +365,6 @@ namespace detail {
 		static constexpr auto gil = std::string_view { "`10`" };
 		static constexpr auto item = std::string_view { "`11`" };
 		static constexpr auto ability = std::string_view { "`12`" };
-
-		if ( str.starts_with( "Huh?" ) ) {
-			int fifty  = 50;
-		}
 
 		// Erase start
 		while ( str[0] == space ) {
@@ -672,7 +668,7 @@ std::uint32_t text_mutator::measure( const std::string& line, const std::size_t 
 }
 
 text_range_type text_mutator::find_dialog( const std::string& str, const text_range_type& range, const int markIndex ) const noexcept {
-	if ( detail::is_upper( str[range.second] ) || str.find( "\"", range.second ) == range.second ) {
+	if ( detail::is_upper( str[range.second] ) ) {
 		const auto end = detail::dialog_end( str, range.second + 1 );
 		return { range.second, end };
 	}
@@ -714,10 +710,6 @@ void text_mutator::text_reflow() {
 
 	int ll = 0;
 	for ( auto& line : m_lines ) {
-		if ( ll++ == 789 ) {
-			int fifty = 50;
-		}
-
 		const auto dialog = find_dialog( line, { 0, 0 }, -1 );
 		if ( dialog.first < dialog.second ) {
 			continue;
@@ -844,20 +836,12 @@ void text_mutator::dialog_reflow() {
 
 	int markIndex = 0;
 	for ( auto& line : m_lines ) {
-		if ( markIndex == 789 ) {
-			int fifty =50;
-		}
-
 		int lineCount = 0;
 		text_range_type pos { 0, 0 };
 		while ( true ) {
 			pos = find_dialog( line, pos, markIndex );
 			if ( pos.first > pos.second ) {
 				break;
-			}
-
-			if ( line[0] == '\'' ) {
-				int fifty = 50;
 			}
 
 			const auto oldLength = ( pos.second - pos.first ) + 1;

@@ -64,6 +64,7 @@ static constexpr std::pair<std::string_view, std::string_view> find_replace[] = 
 	{ "Rugor", "Regole" },
 	{ "Shinryuu", "Shinryu" },
 	{ "Steamship", "Fire-Powered Ship" },
+	{ "Thunder Whip", "Blitz Whip" },
 	{ "Worus", "Walse" },
 	{ "Zeza", "Xezat" },
 	{ "Zokk", "Zok" },
@@ -198,6 +199,12 @@ static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> t
 	{ 495, "But...", "But...`nl`" },
 	{ 496, "`02`!`01``01``01`", "`02`!`bx`" }, { 496, "`02`:  ...", "`02`:  ...`nl`" },
 
+	{ 499, "Yes.`01`", "Yes.`bx`" },
+	{ 500, "see...`01`", "see...`nl`" }, { 500, "Cure 2", "Cura" }, { 500, "Cure 3", "Curaga" },
+	{ 504, "Exit?  `01`", "Teleport?`nl`" },
+
+	{ 510, "gone...`01`", "gone...`nl`" },
+
 	{ 549, "Crystal!", "Crystal!`bx`" },
 	{ 550, "coming `01`  from the Library of the Ancients.", "coming from the library." },
 	{ 553, "\"Crew Dust\"?`01`", "`nl`\"Crew Dust\"?`bx`" },
@@ -266,6 +273,71 @@ static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> t
 	{ 822, "Desert...", "Desert...`nl`" },
 	{ 825, "bird...", "bird...`nl`" },
 
+	{ 829, "...(sigh)...", "...(sigh)...`nl`" },
+	{ 834, "time...`01`", "time...`nl`" },
+
+	{ 846, "WERE", "ARE" }, { 846, "I'm sorry...`01`", "I'm sorry...`nl`" },
+	{ 850, "Hey!`01`", "Hey!`nl`" },
+	{ 854, "forest...`01`", "forest...`bx`" },
+	{ 859, "Huh?", "Huh?`nl`" }, { 859, "wall.`01`", "wall.`bx`" },
+	{ 860, "There is a note.`01`", "There is a note.`nl`" },
+
+	{ 862, "sheet...`01``01`", "sheet...`bx`" },
+	{ 865, "...it's", "`nl` ...It's" }, { 865, "I had sunk", "It had sunk" }, { 865, "sea...`01`", "sea...`bx`" }, { 865, "...then", "...Then" },
+	{ 866, "ship...?`01`", "ship...?`nl`" },
+	{ 867, "Where are we...`01`", "Where are we...?`nl`" },
+	{ 868, "Crescent Island.  `01`", "Crescent Island.  `bx`" }, { 868, "we fell in...`01`", "we fell in...`bx`" }, { 868, "underground...`01`", "underground...`nl`" },
+	{ 869, "being here.`01`", "being here.`bx`" }, { 869, "by the ancients.`01`", "by the ancients.`bx`" }, { 869, "propellers?`01`", "propellers?`bx`" }, { 869, "about it...`01`", "about it...`nl`" },
+	{ 880, "the`01`Earth Crystal!`01``01`", "the Earth Crystal!`bx`" }, { 880, "sky is yours!`01`", "sky is yours!`nl`" },
+	{ 883, "the Crystal of Earth", "The Crystal of Earth" },
+
+	{ 899, "Crystal...", "Crystal...`bx`" }, { 899, "They knew", "The ancient Ronkans knew" }, { 899, "the Crystal was about to shatter", "the Crystal would shatter" },
+	{ 900, "hurry!", "hurry!`nl`" },
+	{ 903, "With this!", "With this!`nl`" }, { 903, "It's called Adamantite...`01`", "It's called Adamantite...`nl`" },
+	{ 910, "Something's wrong!`01`", "Something's wrong!`nl`" },
+	{ 912, "Remarkable memory, eh?`01`", "Remarkable memory, eh?`bx`" }, { 912, "saying...`01`", "saying...`bx`" },
+	{ 913, "Obtained \"Adamantite\"!", "               Obtained \"Adamantite\"!`1706`" },
+	{ 914, "Adamantite!`01`", "Adamantite!`bx`" }, { 914, "away!`01`", "away!`nl`" },
+	{ 917, "Wow!`01`", "Wow!`nl`" },
+	{ 920, "however...`01`", "however...`nl`" },
+	{ 921, "the book, that", "this book," },
+	{ 922, "Thank you, Cid, Mid.`01`", "Thank you, Cid, Mid.`nl`" },
+
+	{ 928, "these ruins.`01`", "these ruins.`bx`" }, { 928, "weak-point...`01`", "weak-point...`nl`" },
+	{ 929, "Well done!`01`", "Well done!`nl`" },
+	{ 932, "It's no use!`01`", "It's no use!`nl`" },
+	{ 940, "Bolt", "Thunder" },
+	{ 943, "You're...`01`", "You're...`nl`" }, { 943, "ther...`01`", "ther...`nl`" },
+	{ 946, "Galuf...`01`", "Galuf...`nl`" },
+	{ 947, "Crystal!`01`", "Crystal!`nl`" },
+	{ 949, "`02`!`01`", "`02`!`nl`" },
+	{ 950, "shattered!`01`", "shattered!`nl`" },
+	{ 952, "Lenna, ...`01`", "Lenna, ...`nl`" }, { 952, "`02`...`01`", "`02`...`nl`" },
+	{ 953, "Earth....`01`", "Earth....`nl`" },
+	{ 955, "Forgive me...`01`", "Forgive me...`nl`" },
+	{ 956, "Sarisa...`01`", "Sarisa...`nl`" },
+	{ 957, "`02`...`01`", "`02`...`nl`" },
+	{ 960, "escape!`01`", "escape!`nl`" },
+	{ 965, "Galuf...`01`", "Galuf...`nl`" },
+	{ 966, "has returned!`01`", "has returned!`nl`" },
+	{ 967, "from our world...", "from our world...`bx`Galuf: " }, { 967, "fighters...`01`", "fighters...`nl`" }, { 967, "the power `01`  of the Crystals to seal him.`01``01``01`", "the power of the Crystals to seal him.`bx`" },
+	{ 968, "went wrong.`01`", "went wrong.`nl`" },
+	{ 969, "too late...`01`", "too late...`nl`" },
+	{ 973, "Exdeath.  `01`", "Exdeath.  `nl`" }, { 973, "last time.  `01`", "last time.  `nl`" }, { 973, "your help!  `01`", "your help!  `nl`" },
+	{ 974, "Hey, wait!`01`", "Hey, wait!`nl`" },
+
+	{ 979, "Huh?", "`02`: Huh?" },
+	{ 980, "Yeah!`01`", "Yeah!`nl`" },
+	{ 985, "meteors...`01`", "meteors...`nl`" },
+	{ 986, "doing here?`01`", "doing here?`nl`" },
+	{ 987, "stay away!`01`", "stay away!`nl`" },
+	{ 989, "What the...!?`01`", "What the...!?`nl`" },
+	{ 994, "handwriting!`01`", "handwriting!`bx`" }, { 994, "hazardous... We're", "hazardous...`bx`We're" },
+	{ 999, "ready!`01`", "ready!`nl`" },
+	{ 1006, "owe you one.`01`", "owe you one.`nl`" },
+
+	{ 1018, "the`01`meteors' energy left!`01``01`", "the meteors' energy left!`bx`" }, { 1018, "ticket...`01`", "ticket...`nl`" },
+
 	{ 1024, "It's on my", "It's on the" },
 	{ 1025, "much for us...", "much for us...`nl`" },
 	{ 1026, "journey!", "journey!`bx`" },
@@ -286,6 +358,17 @@ static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> t
 	{ 1054, "village.", "village.`nl`" }, { 1054, "little...", "little...`bx`" }, { 1054, " after that", "`02`: After that" },
 	{ 1058, "A father...`01`", "A father...`nl`" },
 	{ 1059, "let's go back!`01`", "let's go back!`nl`" },
+
+	{ 1060, "Faris:  ...`01`", "Faris:  ...`nl`" },
+	{ 1065, "tired...`01`", "tired...`nl`" },
+	{ 1067, "Fwahaha...`01`", "Fwahaha...`nl`" },
+	{ 1069, "Master Exdeath!`01`", "Master Exdeath!`nl`" },
+	{ 1070, "I see...`01`", "I see...`nl`" },
+	{ 1075, "Shit!!!`01`", "Shit!!!`nl`" },
+	{ 1085, "Faris...`01`", "Faris...`nl`" },
+
+	{ 1941, "opened.`01``01`", "opened.`bx`" },
+	{ 1945, "Jachol.`01`", "Jachol.`bx`" },
 
 	{ 29, "the Rings...`01``01``01`", "the Rings...`bx`" },
 
@@ -321,7 +404,7 @@ static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> t
 		{ 174, "Job/Ability System?", "                  Job/Ability System?" },
 	{ 175, "The warriors", "`01`The warriors" },
 	{ 178, "You might make a", "`01`You might make a" }, { 178, "First, select", "`01`First, select" },
-	{ 205, "The pirates", "`01` The pirates" }, { 205, "the`01`Pub...", "the Pub...`01` " }, { 205, "Hiccup!...", " Hiccup!..." },
+	{ 205, "The pirates", "`01` The pirates" }, { 205, "the`01`Pub...", "the Pub...`01` " }, { 205, "Hiccup! ...", "Hiccup!..." },
 	{ 240, "'Blue Magic' and 'Learning'", "`01`'Blue Magic' and 'Learning'" },
 	{ 357, "Hic!", " Hic!" },
 
@@ -350,12 +433,37 @@ static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> t
 	{ 722, "...30", " ...30" },
 	{ 723, "..Uhhn....", " ...Uhhn..." },
 
+	{ 745, "Obtained", "              Obtained" },
 	{ 777, "Obtained", "                     Obtained" },
 
 	{ 785, "Another", " Another" },
 	{ 789, "", "`01`" }, { 789, "Learned \"Life Song\"!`01`", "Learned \"Life Song\"!`1706``01``01`" }, { 789, "vitality", " vitality" },
 
 	{ 815, "The Fire", " The Fire" },
+
+	{ 829, "This", " This" },
+	{ 833, "Hahaha!!", " Hahaha!!" },
+	{ 836, "Be careful...", " Be careful..." },
+
+	{ 859, "I see some writing", " I see some writing" },
+	{ 862, ".........", "... ... ..." },
+	{ 865, "...It's", " ...It's" },
+	{ 867, "`01`!! `02`!`01`", "`01` !! `02`! " },
+	{ 869, "...Grandpa!?", " ...Grandpa!?" },
+
+	{ 899, "would shatter", " would shatter" }, { 899, "city...", " city..." },
+
+	{ 914, "`02`,", " `02`," },
+
+	{ 928, "Quickly,", " Quickly" },
+	{ 929, "...`0c`...`0c`...", " ...`0c` ...`0c` ..." },
+	{ 941, "Is that", " Is that" },
+	{ 943, "Sarisa!", " Sarisa!" }, { 943, "You're alive!!", " You're alive!!" }, { 943, "Father!", " Father!" },
+	{ 949, "Are you", " Are you" },
+	{ 952, "Warriors of", " Warriors of" },
+	{ 959, "Dragoon`01`", "Dragoon`01``01`" },
+	{ 965, "What's wrong?", " What's wrong?" },
+	{ 973, "Luckily", " Luckily" }, { 973, "`02`", " `02`" }, { 973, "I won't", " I won't" },
 
 	{ 1026, "journey!", " journey!`01`" }, { 1026, "as long as", " as long as" },
 	{ 1027, "`02` is back!!", " `02` is back!!" },
@@ -365,12 +473,20 @@ static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> t
 	{ 1046, "Learned \"Charm Song\"!", "`01`                Learned \"Charm Song\"!" },
 	{ 1052, "What's wrong?", " What's wrong?" },
 
+	{ 1084, "     Obtained `02`'s items.", "               Obtained `02`'s items." },
+	{ 1084, "         Obtained Lenna's items.", "               Obtained Lenna's items." },
+	{ 1084, "         Obtained Faris' items.", "                 Obtained Faris' items." },
+	{ 1084, "      Obtained Pieces of Crystal!", "`01`           Obtained Pieces of Crystal!" },
+
 	{ 1334, "You need", " You need" },
 
 	{ 1922, " She's been taken", "She's been taken" },
+
+	{ 1945, "of the long", " of the long" }, { 1945, "Ronka", " Ronka" },
 };
 
 static constexpr std::pair<std::uint32_t, std::string_view> dialog_mark[] = {
+	{ 32, "\"" }, { 33, "\"" }, { 34, "\"" }, { 35, "\"" },
 	{ 174, "How to use the" }, { 174, "Would you like an" },
 	{ 175, "The warriors" },
 	{ 205, "... Hic!" },
@@ -378,6 +494,7 @@ static constexpr std::pair<std::uint32_t, std::string_view> dialog_mark[] = {
 	{ 240, "'Double Grip'" }, { 240, "'Dash'" }, { 240, "'Blue Magic' and 'Learning'" },
 	{ 422, "How" },
 	{ 789, "This" },
+	{ 947, "Crystal!" },
 	{ 1026, "`02`!?" },
 	{ 1028, "`02`!!" },
 	{ 1030, "...Nine" },
