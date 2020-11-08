@@ -175,6 +175,10 @@ public:
 	iterator find( Iter& first, Iter last ) noexcept {
 		auto it = find( *first++ );
 
+		if ( it == end() ) {
+			return end();
+		}
+
 		do {
 			if ( it->value().has_value() ) {
 				return it;
@@ -189,6 +193,10 @@ public:
 	template <class Iter>
 	const_iterator find( Iter& first, Iter last ) const noexcept {
 		auto it = find( *first );
+
+		if ( it == cend() ) {
+			return cend();
+		}
 
 		do {
 			if ( it->value().has_value() ) {

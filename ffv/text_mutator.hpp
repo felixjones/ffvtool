@@ -20,6 +20,7 @@ public:
 	void	name_case( const std::string_view& name );
 	void	dialog_reflow();
 	void	text_reflow();
+	void	battle_bartz();
 
 	void mark_dialog( const int lineId, const std::string_view& search ) {
 		m_dialogMarks[lineId].push_back( search );

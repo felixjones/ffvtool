@@ -367,6 +367,13 @@ static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> t
 	{ 1075, "Shit!!!`01`", "Shit!!!`nl`" },
 	{ 1085, "Faris...`01`", "Faris...`nl`" },
 
+	{ 1088, "Hang on there.`01`", "Hang on there.`nl`" },
+
+	{ 1091, "Grandpa!`01`", "Grandpa!`nl`" },
+	{ 1093, "Galuf...`01`", "Galuf...`nl`" }, { 1093, "I'm sorry.`01`", "I'm sorry.`nl`" },
+	{ 1095, "Gloceana...`01`", "Gloceana...`nl`" }, { 1095, "dwell.  ", "dwell.`bx`  Galuf: " },
+	{ 1097, "monsters ahead!`01`", "monsters ahead!`nl`" },
+
 	{ 1941, "opened.`01``01`", "opened.`bx`" },
 	{ 1945, "Jachol.`01`", "Jachol.`bx`" },
 
@@ -473,9 +480,9 @@ static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> t
 	{ 1046, "Learned \"Charm Song\"!", "`01`                Learned \"Charm Song\"!" },
 	{ 1052, "What's wrong?", " What's wrong?" },
 
-	{ 1084, "     Obtained `02`'s items.", "               Obtained `02`'s items." },
-	{ 1084, "         Obtained Lenna's items.", "               Obtained Lenna's items." },
-	{ 1084, "         Obtained Faris' items.", "                 Obtained Faris' items." },
+	{ 1084, "     Obtained `02`'s items.", "       Obtained `02`'s items." },
+	{ 1084, "         Obtained Lenna's items.", "       Obtained Lenna's items." },
+	{ 1084, "         Obtained Faris' items.", "        Obtained Faris' items." },
 	{ 1084, "      Obtained Pieces of Crystal!", "`01`           Obtained Pieces of Crystal!" },
 
 	{ 1334, "You need", " You need" },
@@ -500,6 +507,8 @@ static constexpr std::pair<std::uint32_t, std::string_view> dialog_mark[] = {
 	{ 1030, "...Nine" },
 	{ 1042, "`02`: Are you going to" }, { 1042, "And you'll" },
 };
+
+static std::vector<std::string> battle_dialog( const ffv::rom& ipsRom, const ffv::text_table::const_type& gbaTextTable, const ffv::text_table::const_type& sfcTextTable, const ffv::gba::font_table& fontTable );
 
 int main( int argc, char * argv[] ) {
 	const auto ipsRom = ffv::rom::read_ips( std::ifstream( argv[1], std::istream::binary ) );
@@ -613,6 +622,18 @@ int main( int argc, char * argv[] ) {
 		}
 	}
 
+	const auto sfcBattleTextTable = ffv::text_table::read( std::ifstream( argv[8] ) );
+	if ( sfcBattleTextTable.empty() ) [[unlikely]] {
+		throw std::invalid_argument( "Invalid or corrupt SFC text table" );
+	}
+
+	const auto gbaBattleTextTable = ffv::text_table::read( std::ifstream( argv[9] ) );
+	if ( gbaBattleTextTable.empty() ) [[unlikely]] {
+		throw std::invalid_argument( "Invalid or corrupt GBA text table" );
+	}
+
+	const auto battleLines = battle_dialog( ipsRom, gbaBattleTextTable, sfcBattleTextTable, fontTable );
+
 	std::cout << "Writing IPS\n";
 
 	auto writer = ffv::ips::writer();
@@ -658,7 +679,41 @@ int main( int argc, char * argv[] ) {
 	writer.seekg( sizeof( textData.header ) + ( 4 * static_cast<std::size_t>( textBegin ) ) + textStart );
 	for ( const auto offset : offsets ) {
 		writer.write( offset );
-		offsetIndex++;
+	}
+
+	writer.seekg( textData.offsets[2693] + textStart );
+
+	offset = textData.offsets[2693];
+	std::vector<std::uint32_t> battleOffsets;
+	for ( const auto& line : battleLines ) {
+		battleOffsets.push_back( offset );
+
+		auto begin = std::cbegin( line );
+		while ( begin != std::cend( line ) ) {
+			auto end = begin + 1;
+			auto key = gbaBattleTextTable.rfind( std::string( begin, end ) );
+			while ( key.empty() ) {
+				if ( end == std::cend( line ) ) {
+					break;
+				}
+				++end;
+				key = gbaBattleTextTable.rfind( std::string( begin, end ) );
+			}
+
+			if ( key.empty() ) [[unlikely]] {
+				std::cout << " WARNING No key for string \"" << std::string( begin, end ) << "\"\n";
+			}
+
+			offset += static_cast<std::uint32_t>( key.size() );
+			writer.write( std::cbegin( key ), std::cend( key ) );
+
+			begin = end;
+		}
+	}
+
+	writer.seekg( sizeof( textData.header ) + ( 4 * 2693 ) + textStart );
+	for ( const auto offset : battleOffsets ) {
+		writer.write( offset );
 	}
 
 	auto ips = std::ofstream( "C:\\Users\\felixjones\\source\\repos\\ffvtool\\roms\\testU\\out.ips", std::ostream::binary );
@@ -678,12 +733,12 @@ std::vector<std::byte> to_agb( const ffv::rom& ipsRom, std::uint32_t address, st
 		const auto it = sfcTextTable.find( first, last );
 		++first;
 
-		if ( it->value().has_value() ) {
+		if ( it != sfcTextTable.cend() && it->value().has_value() ) {
 			const auto gbaKey = gbaTextTable.rfind( it->value().value() );
 			if ( !gbaKey.empty() ) {
 				data.insert( std::end( data ), std::cbegin( gbaKey ), std::cend( gbaKey ) );
 			} else [[unlikely]] {
-				std::cout << "Warning: Missing GBA character for code ";
+				std::cout << "Warning: Missing GBA character for code " << it->value().value() << " : ";
 				while ( begin != first ) {
 					std::cout << std::hex << std::setfill( '0' ) << std::setw( 2 ) << static_cast<int>( *begin++ );
 				}
@@ -700,4 +755,39 @@ std::vector<std::byte> to_agb( const ffv::rom& ipsRom, std::uint32_t address, st
 
 	data.shrink_to_fit();
 	return data;
+}
+
+static constexpr std::tuple<std::uint32_t, std::string_view, std::string_view> battle_find_replace[] = {
+	{}
+};
+
+std::vector<std::string> battle_dialog( const ffv::rom& ipsRom, const ffv::text_table::const_type& gbaTextTable, const ffv::text_table::const_type& sfcTextTable, const ffv::gba::font_table& fontTable ) {
+	const auto agbBattle = to_agb( ipsRom, 0x273B00 + 0x200, 0x2750FF, sfcTextTable, gbaTextTable );
+	auto mutator = ffv::text_mutator( agbBattle, gbaTextTable, fontTable, 0, 0 );
+
+	std::cout << "Battle Find replace\n";
+	for ( const auto& pair : find_replace ) {
+		std::cout << '\t' << pair.first << " -> " << pair.second << '\n';
+		mutator.find_replace( pair.first, pair.second );
+	}
+
+	std::cout << "Battle Bartz\n";
+	mutator.battle_bartz();
+
+	std::cout << "Battle dialog reflow\n";
+	mutator.dialog_reflow();
+
+	return mutator.lines();
+
+	/*
+	std::cout << "Battle indexed find replace\n";
+	for ( const auto& tuple : battle_find_replace ) {
+		std::cout << "\t[" << std::get<0>( tuple ) << "] " << std::get<1>( tuple ) << " -> " << std::get<2>( tuple );
+		if ( !mutator.target_find_replace( std::get<0>( tuple ), std::get<1>( tuple ), std::get<2>( tuple ) ) ) [[unlikely]] {
+			std::cout << " WARNING Nothing found\n";
+		} else [[likely]] {
+			std::cout << '\n';
+		}
+	}
+	*/
 }

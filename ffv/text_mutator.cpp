@@ -938,3 +938,12 @@ void text_mutator::dialog_reflow() {
 		}
 	}
 }
+
+void text_mutator::battle_bartz() {
+	for ( auto& line : m_lines ) {
+		if ( line.starts_with( '"' ) ) {
+			line.erase( 0, 1 );
+			line.insert( 0, "`02`: " );
+		}
+	}
+}
